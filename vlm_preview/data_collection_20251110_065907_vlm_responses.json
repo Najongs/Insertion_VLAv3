@@ -1,0 +1,1311 @@
+{
+  "episode_name": "data_collection_20251110_065907",
+  "episode_path": "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907",
+  "vlm_model": "Qwen/Qwen2.5-VL-3B-Instruct",
+  "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+  "vlm_reuse_count": 1,
+  "total_samples": 100,
+  "num_vlm_updates": 100,
+  "results": [
+    {
+      "sample_idx": 0,
+      "vlm_idx": 0,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725547.174.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725547.177.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725547.177.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725547.172.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725547.427.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned towards the red point.\n- required adjustment direction: The needle needs to be moved slightly to the right and downward to align with the red point.\n- insertion readiness: Yes, the needle is aligned with the red point, indicating readiness for insertion."
+    },
+    {
+      "sample_idx": 1,
+      "vlm_idx": 1,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725547.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725547.425.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725547.430.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725547.423.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725547.671.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 2,
+      "vlm_idx": 2,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725547.677.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725547.675.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725547.678.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725547.676.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725547.926.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 3,
+      "vlm_idx": 3,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725547.926.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725547.925.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725547.923.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725547.923.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725548.170.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle is positioned above the red point, but it needs to be aligned vertically.\n- required adjustment direction: The needle should be lowered towards the red point.\n- insertion readiness: No, the needle is not yet in line with the red point."
+    },
+    {
+      "sample_idx": 4,
+      "vlm_idx": 4,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725548.182.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725548.176.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725548.179.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725548.174.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725548.419.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 5,
+      "vlm_idx": 5,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725548.423.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725548.425.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725548.423.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725548.428.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725548.670.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 6,
+      "vlm_idx": 6,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725548.682.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725548.681.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725548.674.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725548.678.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725548.919.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 7,
+      "vlm_idx": 7,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725548.927.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725548.926.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725548.924.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725548.927.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725549.171.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 8,
+      "vlm_idx": 8,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725549.173.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725549.174.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725549.174.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725549.175.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725549.419.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle is positioned above the red point, but it needs to be aligned vertically.\n- required adjustment direction: The needle should be lowered until its tip is directly over the red point.\n- insertion readiness: No, the needle is not yet in line with the red point."
+    },
+    {
+      "sample_idx": 9,
+      "vlm_idx": 9,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725549.425.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725549.425.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725549.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725549.430.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725549.675.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 10,
+      "vlm_idx": 10,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725549.681.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725549.683.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725549.673.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725549.683.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725549.926.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 11,
+      "vlm_idx": 11,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725549.922.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725549.924.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725549.929.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725549.925.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725550.173.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 12,
+      "vlm_idx": 12,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725550.173.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725550.173.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725550.177.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725550.173.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725550.420.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 13,
+      "vlm_idx": 13,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725550.426.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725550.426.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725550.425.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725550.427.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725550.670.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 14,
+      "vlm_idx": 14,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725550.676.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725550.679.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725550.676.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725550.680.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725550.922.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 15,
+      "vlm_idx": 15,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725550.926.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725550.922.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725550.922.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725550.929.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725551.170.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 16,
+      "vlm_idx": 16,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725551.179.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725551.172.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725551.174.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725551.177.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725551.423.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle is positioned above the Red point, but it needs to be aligned vertically.\n- required adjustment direction: The needle should be lowered until its tip is directly over the Red point.\n- insertion readiness: No, the needle is not yet in line with the Red point."
+    },
+    {
+      "sample_idx": 17,
+      "vlm_idx": 17,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725551.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725551.427.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725551.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725551.425.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725551.670.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 18,
+      "vlm_idx": 18,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725551.676.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725551.675.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725551.672.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725551.677.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725551.923.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 19,
+      "vlm_idx": 19,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725551.931.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725551.927.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725551.922.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725551.922.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725552.173.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 20,
+      "vlm_idx": 20,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725552.173.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725552.175.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725552.176.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725552.174.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725552.426.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 21,
+      "vlm_idx": 21,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725552.426.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725552.423.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725552.426.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725552.423.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725552.673.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 22,
+      "vlm_idx": 22,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725552.678.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725552.674.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725552.673.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725552.676.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725552.923.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 23,
+      "vlm_idx": 23,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725552.924.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725552.928.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725552.922.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725552.929.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725553.170.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 24,
+      "vlm_idx": 24,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725553.186.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725553.175.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725553.187.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725553.183.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725553.422.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 25,
+      "vlm_idx": 25,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725553.456.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725553.424.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725553.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725553.425.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725553.670.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 26,
+      "vlm_idx": 26,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725553.684.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725553.674.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725553.673.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725553.683.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725553.920.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 27,
+      "vlm_idx": 27,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725553.924.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725553.922.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725553.926.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725553.924.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725554.171.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 28,
+      "vlm_idx": 28,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725554.177.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725554.173.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725554.175.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725554.173.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725554.422.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 29,
+      "vlm_idx": 29,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725554.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725554.425.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725554.426.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725554.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725554.674.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle is positioned above the Red point, but it needs to be aligned vertically.\n- required adjustment direction: The needle should be lowered until its tip is directly over the Red point.\n- insertion readiness: No, the needle is not yet in line with the Red point."
+    },
+    {
+      "sample_idx": 30,
+      "vlm_idx": 30,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725554.674.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725554.675.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725554.677.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725554.674.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725554.922.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 31,
+      "vlm_idx": 31,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725554.922.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725554.926.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725554.926.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725554.922.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725555.170.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 32,
+      "vlm_idx": 32,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725555.177.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725555.173.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725555.183.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725555.175.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725555.420.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 33,
+      "vlm_idx": 33,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725555.426.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725555.424.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725555.430.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725555.430.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725555.673.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 34,
+      "vlm_idx": 34,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725555.673.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725555.673.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725555.676.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725555.673.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725555.919.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 35,
+      "vlm_idx": 35,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725555.923.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725555.925.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725555.929.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725555.923.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725556.170.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 36,
+      "vlm_idx": 36,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725556.177.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725556.177.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725556.179.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725556.183.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725556.423.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 37,
+      "vlm_idx": 37,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725556.429.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725556.423.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725556.433.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725556.423.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725556.669.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.\n- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.\n- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point."
+    },
+    {
+      "sample_idx": 38,
+      "vlm_idx": 38,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725556.681.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725556.681.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725556.681.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725556.681.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725556.919.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 39,
+      "vlm_idx": 39,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725556.931.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725556.925.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725556.942.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725556.923.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725557.170.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 40,
+      "vlm_idx": 40,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725557.177.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725557.178.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725557.173.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725557.173.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725557.429.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 41,
+      "vlm_idx": 41,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725557.425.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725557.426.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725557.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725557.426.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725557.669.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle is positioned above the red point, but it needs to be aligned vertically.\n- required adjustment direction: The needle should be lowered until its tip is directly over the red point.\n- insertion readiness: No, the needle is not yet in line with the red point."
+    },
+    {
+      "sample_idx": 42,
+      "vlm_idx": 42,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725557.674.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725557.673.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725557.674.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725557.676.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725557.920.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle is positioned above the red point, but it needs to be aligned vertically.\n- required adjustment direction: The needle should be lowered until its tip is directly over the red point.\n- insertion readiness: No, the needle is not yet in line with the red point."
+    },
+    {
+      "sample_idx": 43,
+      "vlm_idx": 43,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725557.952.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725557.935.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725557.926.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725557.936.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725558.171.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle is positioned above the red point, but it needs to be aligned vertically.\n- required adjustment direction: The needle should be lowered until its tip is directly over the red point.\n- insertion readiness: No, the needle is not yet in line with the red point."
+    },
+    {
+      "sample_idx": 44,
+      "vlm_idx": 44,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725558.177.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725558.174.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725558.174.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725558.173.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725558.423.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 45,
+      "vlm_idx": 45,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725558.424.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725558.430.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725558.433.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725558.432.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725558.674.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 46,
+      "vlm_idx": 46,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725558.682.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725558.676.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725558.680.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725558.682.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725558.926.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the Red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the Red point.\n- required adjustment direction: The needle needs to be moved downward towards the Red point.\n- insertion readiness: No, the needle is not yet aligned with the Red point."
+    },
+    {
+      "sample_idx": 47,
+      "vlm_idx": 47,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725558.926.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725558.925.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725558.922.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725558.930.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725559.170.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 48,
+      "vlm_idx": 48,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725559.178.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725559.181.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725559.175.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725559.181.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725559.424.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the surface.\n- needle alignment: The needle is positioned above the red point, but it needs to be aligned vertically.\n- required adjustment direction: The needle should be lowered until its tip is directly over the red point.\n- insertion readiness: No, the needle is not yet in line with the red point."
+    },
+    {
+      "sample_idx": 49,
+      "vlm_idx": 49,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725559.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725559.425.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725559.426.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725559.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725559.672.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.\n- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.\n- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point."
+    },
+    {
+      "sample_idx": 50,
+      "vlm_idx": 50,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725559.677.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725559.682.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725559.681.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725559.680.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725559.919.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the surface.\n- needle alignment: The needle is positioned above the red point, but it needs to be aligned vertically.\n- required adjustment direction: The needle should be lowered until its tip is directly over the red point.\n- insertion readiness: No, the needle is not yet in line with the red point."
+    },
+    {
+      "sample_idx": 51,
+      "vlm_idx": 51,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725559.928.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725559.927.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725559.928.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725559.930.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725560.170.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 52,
+      "vlm_idx": 52,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725560.175.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725560.175.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725560.178.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725560.175.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725560.425.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 53,
+      "vlm_idx": 53,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725560.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725560.429.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725560.423.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725560.425.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725560.670.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the surface.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 54,
+      "vlm_idx": 54,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725560.680.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725560.678.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725560.678.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725560.679.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725560.919.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the surface.\n- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.\n- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.\n- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point."
+    },
+    {
+      "sample_idx": 55,
+      "vlm_idx": 55,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725560.925.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725560.925.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725560.927.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725560.922.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725561.171.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 56,
+      "vlm_idx": 56,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725561.173.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725561.174.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725561.177.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725561.176.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725561.419.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the surface.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 57,
+      "vlm_idx": 57,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725561.427.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725561.423.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725561.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725561.426.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725561.670.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 58,
+      "vlm_idx": 58,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725561.679.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725561.681.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725561.679.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725561.678.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725561.919.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 59,
+      "vlm_idx": 59,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725561.929.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725561.923.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725561.929.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725561.923.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725562.174.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 60,
+      "vlm_idx": 60,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725562.178.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725562.175.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725562.172.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725562.178.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725562.422.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 61,
+      "vlm_idx": 61,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725562.430.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725562.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725562.433.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725562.426.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725562.673.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 62,
+      "vlm_idx": 62,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725562.674.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725562.676.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725562.677.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725562.677.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725562.923.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 63,
+      "vlm_idx": 63,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725562.922.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725562.922.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725562.927.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725562.932.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725563.171.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 64,
+      "vlm_idx": 64,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725563.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725563.182.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725563.182.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725563.179.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725563.423.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 65,
+      "vlm_idx": 65,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725563.677.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725563.426.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725563.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725563.426.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725563.671.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 66,
+      "vlm_idx": 66,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725563.926.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725563.677.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725563.680.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725563.680.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725563.926.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 67,
+      "vlm_idx": 67,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725564.180.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725563.922.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725563.935.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725563.935.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725564.172.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 68,
+      "vlm_idx": 68,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725564.455.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725564.187.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725564.177.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725564.172.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725564.423.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the surface.\n- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.\n- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.\n- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point."
+    },
+    {
+      "sample_idx": 69,
+      "vlm_idx": 69,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725564.676.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725564.423.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725564.432.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725564.424.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725564.671.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.\n- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.\n- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point."
+    },
+    {
+      "sample_idx": 70,
+      "vlm_idx": 70,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725564.926.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725564.678.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725564.676.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725564.674.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725564.922.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 71,
+      "vlm_idx": 71,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725565.179.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725564.922.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725564.923.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725564.922.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725565.173.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.\n- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.\n- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point."
+    },
+    {
+      "sample_idx": 72,
+      "vlm_idx": 72,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725565.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725565.172.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725565.172.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725565.172.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725565.422.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 73,
+      "vlm_idx": 73,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725565.673.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725565.425.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725565.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725565.427.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725565.669.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 74,
+      "vlm_idx": 74,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725565.923.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725565.672.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725565.674.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725565.675.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725565.926.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 75,
+      "vlm_idx": 75,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725566.180.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725565.930.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725565.923.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725565.923.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725566.171.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned near the red point, but it is not yet aligned directly over it.\n- required adjustment direction: The needle needs to be moved slightly towards the red point to align it properly.\n- insertion readiness: No, the needle is not yet in the correct position to insert into the red point."
+    },
+    {
+      "sample_idx": 76,
+      "vlm_idx": 76,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725566.425.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725566.178.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725566.180.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725566.180.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725566.419.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 77,
+      "vlm_idx": 77,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725566.675.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725566.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725566.425.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725566.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725566.672.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle is positioned such that its tip is aligned with the red point.\n- required adjustment direction: No adjustment is needed as the needle is already aligned with the red point.\n- insertion readiness: Yes, the needle is ready for insertion into the red point."
+    },
+    {
+      "sample_idx": 78,
+      "vlm_idx": 78,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725566.929.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725566.679.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725566.678.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725566.672.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725566.920.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle is positioned such that its tip is aligned with the red point.\n- required adjustment direction: No adjustment is needed as the needle is already aligned with the red point.\n- insertion readiness: Yes, the needle is ready for insertion into the red point."
+    },
+    {
+      "sample_idx": 79,
+      "vlm_idx": 79,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725567.174.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725566.929.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725566.923.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725566.929.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725567.170.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 80,
+      "vlm_idx": 80,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725567.429.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725567.178.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725567.177.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725567.173.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725567.423.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 81,
+      "vlm_idx": 81,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725567.678.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725567.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725567.437.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725567.429.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725567.670.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle is positioned such that its tip is approaching the red point.\n- required adjustment direction: No adjustment is needed as the needle is already aligned with the red point.\n- insertion readiness: Yes, the needle is ready for insertion into the red point."
+    },
+    {
+      "sample_idx": 82,
+      "vlm_idx": 82,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725568.180.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725567.679.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725567.674.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725567.674.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725567.926.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the surface.\n- needle alignment: The needle is positioned such that its tip is aligned with the center of the red point.\n- required adjustment direction: No adjustment is needed as the needle is already aligned with the red point.\n- insertion readiness: Yes, the needle is ready for insertion into the red point."
+    },
+    {
+      "sample_idx": 83,
+      "vlm_idx": 83,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725568.424.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725567.936.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725567.924.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725567.940.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725568.170.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.\n- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.\n- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point."
+    },
+    {
+      "sample_idx": 84,
+      "vlm_idx": 84,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725568.674.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725568.174.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725568.179.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725568.176.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725568.420.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.\n- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.\n- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point."
+    },
+    {
+      "sample_idx": 85,
+      "vlm_idx": 85,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725568.922.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725568.428.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725568.423.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725568.423.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725568.671.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 86,
+      "vlm_idx": 86,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725569.178.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725568.677.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725568.674.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725568.672.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725568.919.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the surface.\n- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.\n- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.\n- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point."
+    },
+    {
+      "sample_idx": 87,
+      "vlm_idx": 87,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725569.429.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725568.925.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725568.929.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725568.923.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725569.173.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the surface.\n- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.\n- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.\n- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point."
+    },
+    {
+      "sample_idx": 88,
+      "vlm_idx": 88,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725569.678.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725569.178.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725569.178.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725569.180.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725569.424.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the surface.\n- needle alignment: The needle is positioned such that its tip is approaching the red point.\n- required adjustment direction: The needle needs to be moved slightly towards the red point to ensure proper alignment.\n- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point."
+    },
+    {
+      "sample_idx": 89,
+      "vlm_idx": 89,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725569.926.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725569.428.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725569.429.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725569.429.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725569.670.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle is positioned such that its tip is aligned with the center of the red point.\n- required adjustment direction: No adjustment is needed as the needle is already aligned with the red point.\n- insertion readiness: Yes, the needle is ready for insertion into the red point."
+    },
+    {
+      "sample_idx": 90,
+      "vlm_idx": 90,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725570.177.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725569.673.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725569.673.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725569.674.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725569.920.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.\n- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.\n- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point."
+    },
+    {
+      "sample_idx": 91,
+      "vlm_idx": 91,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725570.431.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725569.926.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725569.925.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725569.925.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725570.170.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the target surface.\n- needle alignment: The needle tip is positioned above the red point, slightly to the right.\n- required adjustment direction: The needle needs to be moved slightly to the left and downward to align with the center of the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point center."
+    },
+    {
+      "sample_idx": 92,
+      "vlm_idx": 92,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725570.680.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725570.182.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725570.175.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725570.184.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725570.425.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the surface.\n- needle alignment: The needle is positioned such that its tip is aligned with the center of the red point.\n- required adjustment direction: No adjustment is needed as the needle is already aligned with the red point.\n- insertion readiness: Yes, the needle is ready for insertion into the red point."
+    },
+    {
+      "sample_idx": 93,
+      "vlm_idx": 93,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725570.930.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725570.423.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725570.425.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725570.423.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725570.670.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 94,
+      "vlm_idx": 94,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725571.178.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725570.683.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725570.683.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725570.678.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725570.920.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned directly above the red point.\n- required adjustment direction: No adjustment is needed as the needle is already aligned with the red point.\n- insertion readiness: Yes, the needle is ready for insertion into the red point."
+    },
+    {
+      "sample_idx": 95,
+      "vlm_idx": 95,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725571.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725570.927.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725570.930.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725570.930.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725571.171.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 96,
+      "vlm_idx": 96,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725571.675.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725571.173.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725571.208.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725571.178.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725571.427.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the optical table.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    },
+    {
+      "sample_idx": 97,
+      "vlm_idx": 97,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725571.923.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725571.432.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725571.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725571.425.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725571.675.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the surface.\n- needle alignment: The needle is positioned such that its tip is aligned with the center of the red point.\n- required adjustment direction: No adjustment is needed as the needle is already aligned with the red point.\n- insertion readiness: Yes, the needle is ready for insertion into the red point."
+    },
+    {
+      "sample_idx": 98,
+      "vlm_idx": 98,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725572.175.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725571.672.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725571.685.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725571.684.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725571.919.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the surface.\n- needle alignment: The needle is positioned such that its tip is aligned with the center of the red point.\n- required adjustment direction: No adjustment is needed as the needle is already aligned with the red point.\n- insertion readiness: Yes, the needle is ready for insertion into the red point."
+    },
+    {
+      "sample_idx": 99,
+      "vlm_idx": 99,
+      "instruction": "Respond ONLY with the next action.\nEnvironment Context:\n- This is a Meca500 robot workspace.\n- The end-effector holds a needle; the needle tip is the tool.\n- The scene is an optical table with many holes, but these are NOT targets.\n- The ONLY true insertion target is the Red point.\n\nTask:\nYou must analyze the five camera views and determine the needle’s relative position to the Red point.\nIdentify:\n1) needle tip location\n2) alignment relative to the Red point center\n3) required direction to align for insertion\n\nRespond with:\n- target visibility\n- needle alignment\n- required adjustment direction\n- insertion readiness (yes/no)\n",
+      "image_paths": [
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View1/ZED_41182735_left_1762725572.422.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View2/ZED_49429257_left_1762725571.928.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View3/ZED_44377151_left_1762725571.928.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View4/ZED_49045152_left_1762725571.924.jpg",
+        "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907/View5/OAK_1762725572.176.jpg"
+      ],
+      "generated_response": "- target visibility: Yes, the red point is clearly visible on the surface.\n- needle alignment: The needle tip is positioned above the red point.\n- required adjustment direction: The needle needs to be moved downward towards the red point.\n- insertion readiness: No, the needle is not yet aligned with the red point."
+    }
+  ]
+}

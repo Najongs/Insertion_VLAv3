@@ -1,0 +1,1729 @@
+VLM Response Preview
+================================================================================
+
+Episode: data_collection_20251110_065907
+VLM Model: Qwen/Qwen2.5-VL-3B-Instruct
+Instruction: Respond ONLY with the next action.
+Environment Context:
+- This is a Meca500 robot workspace.
+- The end-effector holds a needle; the needle tip is the tool.
+- The scene is an optical table with many holes, but these are NOT targets.
+- The ONLY true insertion target is the Red point.
+
+Task:
+You must analyze the five camera views and determine the needle’s relative position to the Red point.
+Identify:
+1) needle tip location
+2) alignment relative to the Red point center
+3) required direction to align for insertion
+
+Respond with:
+- target visibility
+- needle alignment
+- required adjustment direction
+- insertion readiness (yes/no)
+
+Total Samples: 100
+VLM Reuse Count: 1
+Number of VLM Updates: 100
+
+================================================================================
+Sample #0 (VLM update at idx 0)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725547.174.jpg
+  2. View2/ZED_49429257_left_1762725547.177.jpg
+  3. View3/ZED_44377151_left_1762725547.177.jpg
+  4. View4/ZED_49045152_left_1762725547.172.jpg
+  5. View5/OAK_1762725547.427.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned towards the red point.
+- required adjustment direction: The needle needs to be moved slightly to the right and downward to align with the red point.
+- insertion readiness: Yes, the needle is aligned with the red point, indicating readiness for insertion.
+
+================================================================================
+Sample #1 (VLM update at idx 1)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725547.422.jpg
+  2. View2/ZED_49429257_left_1762725547.425.jpg
+  3. View3/ZED_44377151_left_1762725547.430.jpg
+  4. View4/ZED_49045152_left_1762725547.423.jpg
+  5. View5/OAK_1762725547.671.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #2 (VLM update at idx 2)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725547.677.jpg
+  2. View2/ZED_49429257_left_1762725547.675.jpg
+  3. View3/ZED_44377151_left_1762725547.678.jpg
+  4. View4/ZED_49045152_left_1762725547.676.jpg
+  5. View5/OAK_1762725547.926.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #3 (VLM update at idx 3)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725547.926.jpg
+  2. View2/ZED_49429257_left_1762725547.925.jpg
+  3. View3/ZED_44377151_left_1762725547.923.jpg
+  4. View4/ZED_49045152_left_1762725547.923.jpg
+  5. View5/OAK_1762725548.170.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle is positioned above the red point, but it needs to be aligned vertically.
+- required adjustment direction: The needle should be lowered towards the red point.
+- insertion readiness: No, the needle is not yet in line with the red point.
+
+================================================================================
+Sample #4 (VLM update at idx 4)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725548.182.jpg
+  2. View2/ZED_49429257_left_1762725548.176.jpg
+  3. View3/ZED_44377151_left_1762725548.179.jpg
+  4. View4/ZED_49045152_left_1762725548.174.jpg
+  5. View5/OAK_1762725548.419.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #5 (VLM update at idx 5)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725548.423.jpg
+  2. View2/ZED_49429257_left_1762725548.425.jpg
+  3. View3/ZED_44377151_left_1762725548.423.jpg
+  4. View4/ZED_49045152_left_1762725548.428.jpg
+  5. View5/OAK_1762725548.670.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #6 (VLM update at idx 6)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725548.682.jpg
+  2. View2/ZED_49429257_left_1762725548.681.jpg
+  3. View3/ZED_44377151_left_1762725548.674.jpg
+  4. View4/ZED_49045152_left_1762725548.678.jpg
+  5. View5/OAK_1762725548.919.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #7 (VLM update at idx 7)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725548.927.jpg
+  2. View2/ZED_49429257_left_1762725548.926.jpg
+  3. View3/ZED_44377151_left_1762725548.924.jpg
+  4. View4/ZED_49045152_left_1762725548.927.jpg
+  5. View5/OAK_1762725549.171.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #8 (VLM update at idx 8)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725549.173.jpg
+  2. View2/ZED_49429257_left_1762725549.174.jpg
+  3. View3/ZED_44377151_left_1762725549.174.jpg
+  4. View4/ZED_49045152_left_1762725549.175.jpg
+  5. View5/OAK_1762725549.419.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle is positioned above the red point, but it needs to be aligned vertically.
+- required adjustment direction: The needle should be lowered until its tip is directly over the red point.
+- insertion readiness: No, the needle is not yet in line with the red point.
+
+================================================================================
+Sample #9 (VLM update at idx 9)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725549.425.jpg
+  2. View2/ZED_49429257_left_1762725549.425.jpg
+  3. View3/ZED_44377151_left_1762725549.422.jpg
+  4. View4/ZED_49045152_left_1762725549.430.jpg
+  5. View5/OAK_1762725549.675.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #10 (VLM update at idx 10)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725549.681.jpg
+  2. View2/ZED_49429257_left_1762725549.683.jpg
+  3. View3/ZED_44377151_left_1762725549.673.jpg
+  4. View4/ZED_49045152_left_1762725549.683.jpg
+  5. View5/OAK_1762725549.926.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #11 (VLM update at idx 11)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725549.922.jpg
+  2. View2/ZED_49429257_left_1762725549.924.jpg
+  3. View3/ZED_44377151_left_1762725549.929.jpg
+  4. View4/ZED_49045152_left_1762725549.925.jpg
+  5. View5/OAK_1762725550.173.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #12 (VLM update at idx 12)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725550.173.jpg
+  2. View2/ZED_49429257_left_1762725550.173.jpg
+  3. View3/ZED_44377151_left_1762725550.177.jpg
+  4. View4/ZED_49045152_left_1762725550.173.jpg
+  5. View5/OAK_1762725550.420.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #13 (VLM update at idx 13)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725550.426.jpg
+  2. View2/ZED_49429257_left_1762725550.426.jpg
+  3. View3/ZED_44377151_left_1762725550.425.jpg
+  4. View4/ZED_49045152_left_1762725550.427.jpg
+  5. View5/OAK_1762725550.670.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #14 (VLM update at idx 14)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725550.676.jpg
+  2. View2/ZED_49429257_left_1762725550.679.jpg
+  3. View3/ZED_44377151_left_1762725550.676.jpg
+  4. View4/ZED_49045152_left_1762725550.680.jpg
+  5. View5/OAK_1762725550.922.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #15 (VLM update at idx 15)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725550.926.jpg
+  2. View2/ZED_49429257_left_1762725550.922.jpg
+  3. View3/ZED_44377151_left_1762725550.922.jpg
+  4. View4/ZED_49045152_left_1762725550.929.jpg
+  5. View5/OAK_1762725551.170.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #16 (VLM update at idx 16)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725551.179.jpg
+  2. View2/ZED_49429257_left_1762725551.172.jpg
+  3. View3/ZED_44377151_left_1762725551.174.jpg
+  4. View4/ZED_49045152_left_1762725551.177.jpg
+  5. View5/OAK_1762725551.423.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle is positioned above the Red point, but it needs to be aligned vertically.
+- required adjustment direction: The needle should be lowered until its tip is directly over the Red point.
+- insertion readiness: No, the needle is not yet in line with the Red point.
+
+================================================================================
+Sample #17 (VLM update at idx 17)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725551.422.jpg
+  2. View2/ZED_49429257_left_1762725551.427.jpg
+  3. View3/ZED_44377151_left_1762725551.422.jpg
+  4. View4/ZED_49045152_left_1762725551.425.jpg
+  5. View5/OAK_1762725551.670.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #18 (VLM update at idx 18)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725551.676.jpg
+  2. View2/ZED_49429257_left_1762725551.675.jpg
+  3. View3/ZED_44377151_left_1762725551.672.jpg
+  4. View4/ZED_49045152_left_1762725551.677.jpg
+  5. View5/OAK_1762725551.923.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #19 (VLM update at idx 19)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725551.931.jpg
+  2. View2/ZED_49429257_left_1762725551.927.jpg
+  3. View3/ZED_44377151_left_1762725551.922.jpg
+  4. View4/ZED_49045152_left_1762725551.922.jpg
+  5. View5/OAK_1762725552.173.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #20 (VLM update at idx 20)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725552.173.jpg
+  2. View2/ZED_49429257_left_1762725552.175.jpg
+  3. View3/ZED_44377151_left_1762725552.176.jpg
+  4. View4/ZED_49045152_left_1762725552.174.jpg
+  5. View5/OAK_1762725552.426.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #21 (VLM update at idx 21)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725552.426.jpg
+  2. View2/ZED_49429257_left_1762725552.423.jpg
+  3. View3/ZED_44377151_left_1762725552.426.jpg
+  4. View4/ZED_49045152_left_1762725552.423.jpg
+  5. View5/OAK_1762725552.673.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #22 (VLM update at idx 22)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725552.678.jpg
+  2. View2/ZED_49429257_left_1762725552.674.jpg
+  3. View3/ZED_44377151_left_1762725552.673.jpg
+  4. View4/ZED_49045152_left_1762725552.676.jpg
+  5. View5/OAK_1762725552.923.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #23 (VLM update at idx 23)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725552.924.jpg
+  2. View2/ZED_49429257_left_1762725552.928.jpg
+  3. View3/ZED_44377151_left_1762725552.922.jpg
+  4. View4/ZED_49045152_left_1762725552.929.jpg
+  5. View5/OAK_1762725553.170.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #24 (VLM update at idx 24)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725553.186.jpg
+  2. View2/ZED_49429257_left_1762725553.175.jpg
+  3. View3/ZED_44377151_left_1762725553.187.jpg
+  4. View4/ZED_49045152_left_1762725553.183.jpg
+  5. View5/OAK_1762725553.422.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #25 (VLM update at idx 25)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725553.456.jpg
+  2. View2/ZED_49429257_left_1762725553.424.jpg
+  3. View3/ZED_44377151_left_1762725553.422.jpg
+  4. View4/ZED_49045152_left_1762725553.425.jpg
+  5. View5/OAK_1762725553.670.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #26 (VLM update at idx 26)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725553.684.jpg
+  2. View2/ZED_49429257_left_1762725553.674.jpg
+  3. View3/ZED_44377151_left_1762725553.673.jpg
+  4. View4/ZED_49045152_left_1762725553.683.jpg
+  5. View5/OAK_1762725553.920.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #27 (VLM update at idx 27)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725553.924.jpg
+  2. View2/ZED_49429257_left_1762725553.922.jpg
+  3. View3/ZED_44377151_left_1762725553.926.jpg
+  4. View4/ZED_49045152_left_1762725553.924.jpg
+  5. View5/OAK_1762725554.171.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #28 (VLM update at idx 28)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725554.177.jpg
+  2. View2/ZED_49429257_left_1762725554.173.jpg
+  3. View3/ZED_44377151_left_1762725554.175.jpg
+  4. View4/ZED_49045152_left_1762725554.173.jpg
+  5. View5/OAK_1762725554.422.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #29 (VLM update at idx 29)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725554.422.jpg
+  2. View2/ZED_49429257_left_1762725554.425.jpg
+  3. View3/ZED_44377151_left_1762725554.426.jpg
+  4. View4/ZED_49045152_left_1762725554.422.jpg
+  5. View5/OAK_1762725554.674.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle is positioned above the Red point, but it needs to be aligned vertically.
+- required adjustment direction: The needle should be lowered until its tip is directly over the Red point.
+- insertion readiness: No, the needle is not yet in line with the Red point.
+
+================================================================================
+Sample #30 (VLM update at idx 30)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725554.674.jpg
+  2. View2/ZED_49429257_left_1762725554.675.jpg
+  3. View3/ZED_44377151_left_1762725554.677.jpg
+  4. View4/ZED_49045152_left_1762725554.674.jpg
+  5. View5/OAK_1762725554.922.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #31 (VLM update at idx 31)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725554.922.jpg
+  2. View2/ZED_49429257_left_1762725554.926.jpg
+  3. View3/ZED_44377151_left_1762725554.926.jpg
+  4. View4/ZED_49045152_left_1762725554.922.jpg
+  5. View5/OAK_1762725555.170.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #32 (VLM update at idx 32)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725555.177.jpg
+  2. View2/ZED_49429257_left_1762725555.173.jpg
+  3. View3/ZED_44377151_left_1762725555.183.jpg
+  4. View4/ZED_49045152_left_1762725555.175.jpg
+  5. View5/OAK_1762725555.420.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #33 (VLM update at idx 33)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725555.426.jpg
+  2. View2/ZED_49429257_left_1762725555.424.jpg
+  3. View3/ZED_44377151_left_1762725555.430.jpg
+  4. View4/ZED_49045152_left_1762725555.430.jpg
+  5. View5/OAK_1762725555.673.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #34 (VLM update at idx 34)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725555.673.jpg
+  2. View2/ZED_49429257_left_1762725555.673.jpg
+  3. View3/ZED_44377151_left_1762725555.676.jpg
+  4. View4/ZED_49045152_left_1762725555.673.jpg
+  5. View5/OAK_1762725555.919.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #35 (VLM update at idx 35)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725555.923.jpg
+  2. View2/ZED_49429257_left_1762725555.925.jpg
+  3. View3/ZED_44377151_left_1762725555.929.jpg
+  4. View4/ZED_49045152_left_1762725555.923.jpg
+  5. View5/OAK_1762725556.170.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #36 (VLM update at idx 36)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725556.177.jpg
+  2. View2/ZED_49429257_left_1762725556.177.jpg
+  3. View3/ZED_44377151_left_1762725556.179.jpg
+  4. View4/ZED_49045152_left_1762725556.183.jpg
+  5. View5/OAK_1762725556.423.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #37 (VLM update at idx 37)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725556.429.jpg
+  2. View2/ZED_49429257_left_1762725556.423.jpg
+  3. View3/ZED_44377151_left_1762725556.433.jpg
+  4. View4/ZED_49045152_left_1762725556.423.jpg
+  5. View5/OAK_1762725556.669.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.
+- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.
+- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point.
+
+================================================================================
+Sample #38 (VLM update at idx 38)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725556.681.jpg
+  2. View2/ZED_49429257_left_1762725556.681.jpg
+  3. View3/ZED_44377151_left_1762725556.681.jpg
+  4. View4/ZED_49045152_left_1762725556.681.jpg
+  5. View5/OAK_1762725556.919.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #39 (VLM update at idx 39)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725556.931.jpg
+  2. View2/ZED_49429257_left_1762725556.925.jpg
+  3. View3/ZED_44377151_left_1762725556.942.jpg
+  4. View4/ZED_49045152_left_1762725556.923.jpg
+  5. View5/OAK_1762725557.170.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #40 (VLM update at idx 40)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725557.177.jpg
+  2. View2/ZED_49429257_left_1762725557.178.jpg
+  3. View3/ZED_44377151_left_1762725557.173.jpg
+  4. View4/ZED_49045152_left_1762725557.173.jpg
+  5. View5/OAK_1762725557.429.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #41 (VLM update at idx 41)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725557.425.jpg
+  2. View2/ZED_49429257_left_1762725557.426.jpg
+  3. View3/ZED_44377151_left_1762725557.422.jpg
+  4. View4/ZED_49045152_left_1762725557.426.jpg
+  5. View5/OAK_1762725557.669.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle is positioned above the red point, but it needs to be aligned vertically.
+- required adjustment direction: The needle should be lowered until its tip is directly over the red point.
+- insertion readiness: No, the needle is not yet in line with the red point.
+
+================================================================================
+Sample #42 (VLM update at idx 42)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725557.674.jpg
+  2. View2/ZED_49429257_left_1762725557.673.jpg
+  3. View3/ZED_44377151_left_1762725557.674.jpg
+  4. View4/ZED_49045152_left_1762725557.676.jpg
+  5. View5/OAK_1762725557.920.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle is positioned above the red point, but it needs to be aligned vertically.
+- required adjustment direction: The needle should be lowered until its tip is directly over the red point.
+- insertion readiness: No, the needle is not yet in line with the red point.
+
+================================================================================
+Sample #43 (VLM update at idx 43)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725557.952.jpg
+  2. View2/ZED_49429257_left_1762725557.935.jpg
+  3. View3/ZED_44377151_left_1762725557.926.jpg
+  4. View4/ZED_49045152_left_1762725557.936.jpg
+  5. View5/OAK_1762725558.171.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle is positioned above the red point, but it needs to be aligned vertically.
+- required adjustment direction: The needle should be lowered until its tip is directly over the red point.
+- insertion readiness: No, the needle is not yet in line with the red point.
+
+================================================================================
+Sample #44 (VLM update at idx 44)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725558.177.jpg
+  2. View2/ZED_49429257_left_1762725558.174.jpg
+  3. View3/ZED_44377151_left_1762725558.174.jpg
+  4. View4/ZED_49045152_left_1762725558.173.jpg
+  5. View5/OAK_1762725558.423.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #45 (VLM update at idx 45)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725558.424.jpg
+  2. View2/ZED_49429257_left_1762725558.430.jpg
+  3. View3/ZED_44377151_left_1762725558.433.jpg
+  4. View4/ZED_49045152_left_1762725558.432.jpg
+  5. View5/OAK_1762725558.674.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #46 (VLM update at idx 46)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725558.682.jpg
+  2. View2/ZED_49429257_left_1762725558.676.jpg
+  3. View3/ZED_44377151_left_1762725558.680.jpg
+  4. View4/ZED_49045152_left_1762725558.682.jpg
+  5. View5/OAK_1762725558.926.jpg
+
+VLM Response:
+- target visibility: Yes, the Red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the Red point.
+- required adjustment direction: The needle needs to be moved downward towards the Red point.
+- insertion readiness: No, the needle is not yet aligned with the Red point.
+
+================================================================================
+Sample #47 (VLM update at idx 47)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725558.926.jpg
+  2. View2/ZED_49429257_left_1762725558.925.jpg
+  3. View3/ZED_44377151_left_1762725558.922.jpg
+  4. View4/ZED_49045152_left_1762725558.930.jpg
+  5. View5/OAK_1762725559.170.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #48 (VLM update at idx 48)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725559.178.jpg
+  2. View2/ZED_49429257_left_1762725559.181.jpg
+  3. View3/ZED_44377151_left_1762725559.175.jpg
+  4. View4/ZED_49045152_left_1762725559.181.jpg
+  5. View5/OAK_1762725559.424.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the surface.
+- needle alignment: The needle is positioned above the red point, but it needs to be aligned vertically.
+- required adjustment direction: The needle should be lowered until its tip is directly over the red point.
+- insertion readiness: No, the needle is not yet in line with the red point.
+
+================================================================================
+Sample #49 (VLM update at idx 49)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725559.422.jpg
+  2. View2/ZED_49429257_left_1762725559.425.jpg
+  3. View3/ZED_44377151_left_1762725559.426.jpg
+  4. View4/ZED_49045152_left_1762725559.422.jpg
+  5. View5/OAK_1762725559.672.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.
+- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.
+- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point.
+
+================================================================================
+Sample #50 (VLM update at idx 50)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725559.677.jpg
+  2. View2/ZED_49429257_left_1762725559.682.jpg
+  3. View3/ZED_44377151_left_1762725559.681.jpg
+  4. View4/ZED_49045152_left_1762725559.680.jpg
+  5. View5/OAK_1762725559.919.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the surface.
+- needle alignment: The needle is positioned above the red point, but it needs to be aligned vertically.
+- required adjustment direction: The needle should be lowered until its tip is directly over the red point.
+- insertion readiness: No, the needle is not yet in line with the red point.
+
+================================================================================
+Sample #51 (VLM update at idx 51)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725559.928.jpg
+  2. View2/ZED_49429257_left_1762725559.927.jpg
+  3. View3/ZED_44377151_left_1762725559.928.jpg
+  4. View4/ZED_49045152_left_1762725559.930.jpg
+  5. View5/OAK_1762725560.170.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #52 (VLM update at idx 52)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725560.175.jpg
+  2. View2/ZED_49429257_left_1762725560.175.jpg
+  3. View3/ZED_44377151_left_1762725560.178.jpg
+  4. View4/ZED_49045152_left_1762725560.175.jpg
+  5. View5/OAK_1762725560.425.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #53 (VLM update at idx 53)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725560.422.jpg
+  2. View2/ZED_49429257_left_1762725560.429.jpg
+  3. View3/ZED_44377151_left_1762725560.423.jpg
+  4. View4/ZED_49045152_left_1762725560.425.jpg
+  5. View5/OAK_1762725560.670.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the surface.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #54 (VLM update at idx 54)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725560.680.jpg
+  2. View2/ZED_49429257_left_1762725560.678.jpg
+  3. View3/ZED_44377151_left_1762725560.678.jpg
+  4. View4/ZED_49045152_left_1762725560.679.jpg
+  5. View5/OAK_1762725560.919.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the surface.
+- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.
+- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.
+- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point.
+
+================================================================================
+Sample #55 (VLM update at idx 55)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725560.925.jpg
+  2. View2/ZED_49429257_left_1762725560.925.jpg
+  3. View3/ZED_44377151_left_1762725560.927.jpg
+  4. View4/ZED_49045152_left_1762725560.922.jpg
+  5. View5/OAK_1762725561.171.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #56 (VLM update at idx 56)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725561.173.jpg
+  2. View2/ZED_49429257_left_1762725561.174.jpg
+  3. View3/ZED_44377151_left_1762725561.177.jpg
+  4. View4/ZED_49045152_left_1762725561.176.jpg
+  5. View5/OAK_1762725561.419.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the surface.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #57 (VLM update at idx 57)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725561.427.jpg
+  2. View2/ZED_49429257_left_1762725561.423.jpg
+  3. View3/ZED_44377151_left_1762725561.422.jpg
+  4. View4/ZED_49045152_left_1762725561.426.jpg
+  5. View5/OAK_1762725561.670.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #58 (VLM update at idx 58)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725561.679.jpg
+  2. View2/ZED_49429257_left_1762725561.681.jpg
+  3. View3/ZED_44377151_left_1762725561.679.jpg
+  4. View4/ZED_49045152_left_1762725561.678.jpg
+  5. View5/OAK_1762725561.919.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #59 (VLM update at idx 59)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725561.929.jpg
+  2. View2/ZED_49429257_left_1762725561.923.jpg
+  3. View3/ZED_44377151_left_1762725561.929.jpg
+  4. View4/ZED_49045152_left_1762725561.923.jpg
+  5. View5/OAK_1762725562.174.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #60 (VLM update at idx 60)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725562.178.jpg
+  2. View2/ZED_49429257_left_1762725562.175.jpg
+  3. View3/ZED_44377151_left_1762725562.172.jpg
+  4. View4/ZED_49045152_left_1762725562.178.jpg
+  5. View5/OAK_1762725562.422.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #61 (VLM update at idx 61)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725562.430.jpg
+  2. View2/ZED_49429257_left_1762725562.422.jpg
+  3. View3/ZED_44377151_left_1762725562.433.jpg
+  4. View4/ZED_49045152_left_1762725562.426.jpg
+  5. View5/OAK_1762725562.673.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #62 (VLM update at idx 62)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725562.674.jpg
+  2. View2/ZED_49429257_left_1762725562.676.jpg
+  3. View3/ZED_44377151_left_1762725562.677.jpg
+  4. View4/ZED_49045152_left_1762725562.677.jpg
+  5. View5/OAK_1762725562.923.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #63 (VLM update at idx 63)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725562.922.jpg
+  2. View2/ZED_49429257_left_1762725562.922.jpg
+  3. View3/ZED_44377151_left_1762725562.927.jpg
+  4. View4/ZED_49045152_left_1762725562.932.jpg
+  5. View5/OAK_1762725563.171.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #64 (VLM update at idx 64)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725563.422.jpg
+  2. View2/ZED_49429257_left_1762725563.182.jpg
+  3. View3/ZED_44377151_left_1762725563.182.jpg
+  4. View4/ZED_49045152_left_1762725563.179.jpg
+  5. View5/OAK_1762725563.423.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #65 (VLM update at idx 65)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725563.677.jpg
+  2. View2/ZED_49429257_left_1762725563.426.jpg
+  3. View3/ZED_44377151_left_1762725563.422.jpg
+  4. View4/ZED_49045152_left_1762725563.426.jpg
+  5. View5/OAK_1762725563.671.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #66 (VLM update at idx 66)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725563.926.jpg
+  2. View2/ZED_49429257_left_1762725563.677.jpg
+  3. View3/ZED_44377151_left_1762725563.680.jpg
+  4. View4/ZED_49045152_left_1762725563.680.jpg
+  5. View5/OAK_1762725563.926.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #67 (VLM update at idx 67)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725564.180.jpg
+  2. View2/ZED_49429257_left_1762725563.922.jpg
+  3. View3/ZED_44377151_left_1762725563.935.jpg
+  4. View4/ZED_49045152_left_1762725563.935.jpg
+  5. View5/OAK_1762725564.172.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #68 (VLM update at idx 68)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725564.455.jpg
+  2. View2/ZED_49429257_left_1762725564.187.jpg
+  3. View3/ZED_44377151_left_1762725564.177.jpg
+  4. View4/ZED_49045152_left_1762725564.172.jpg
+  5. View5/OAK_1762725564.423.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the surface.
+- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.
+- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.
+- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point.
+
+================================================================================
+Sample #69 (VLM update at idx 69)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725564.676.jpg
+  2. View2/ZED_49429257_left_1762725564.423.jpg
+  3. View3/ZED_44377151_left_1762725564.432.jpg
+  4. View4/ZED_49045152_left_1762725564.424.jpg
+  5. View5/OAK_1762725564.671.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.
+- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.
+- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point.
+
+================================================================================
+Sample #70 (VLM update at idx 70)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725564.926.jpg
+  2. View2/ZED_49429257_left_1762725564.678.jpg
+  3. View3/ZED_44377151_left_1762725564.676.jpg
+  4. View4/ZED_49045152_left_1762725564.674.jpg
+  5. View5/OAK_1762725564.922.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #71 (VLM update at idx 71)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725565.179.jpg
+  2. View2/ZED_49429257_left_1762725564.922.jpg
+  3. View3/ZED_44377151_left_1762725564.923.jpg
+  4. View4/ZED_49045152_left_1762725564.922.jpg
+  5. View5/OAK_1762725565.173.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.
+- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.
+- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point.
+
+================================================================================
+Sample #72 (VLM update at idx 72)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725565.422.jpg
+  2. View2/ZED_49429257_left_1762725565.172.jpg
+  3. View3/ZED_44377151_left_1762725565.172.jpg
+  4. View4/ZED_49045152_left_1762725565.172.jpg
+  5. View5/OAK_1762725565.422.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #73 (VLM update at idx 73)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725565.673.jpg
+  2. View2/ZED_49429257_left_1762725565.425.jpg
+  3. View3/ZED_44377151_left_1762725565.422.jpg
+  4. View4/ZED_49045152_left_1762725565.427.jpg
+  5. View5/OAK_1762725565.669.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #74 (VLM update at idx 74)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725565.923.jpg
+  2. View2/ZED_49429257_left_1762725565.672.jpg
+  3. View3/ZED_44377151_left_1762725565.674.jpg
+  4. View4/ZED_49045152_left_1762725565.675.jpg
+  5. View5/OAK_1762725565.926.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #75 (VLM update at idx 75)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725566.180.jpg
+  2. View2/ZED_49429257_left_1762725565.930.jpg
+  3. View3/ZED_44377151_left_1762725565.923.jpg
+  4. View4/ZED_49045152_left_1762725565.923.jpg
+  5. View5/OAK_1762725566.171.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned near the red point, but it is not yet aligned directly over it.
+- required adjustment direction: The needle needs to be moved slightly towards the red point to align it properly.
+- insertion readiness: No, the needle is not yet in the correct position to insert into the red point.
+
+================================================================================
+Sample #76 (VLM update at idx 76)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725566.425.jpg
+  2. View2/ZED_49429257_left_1762725566.178.jpg
+  3. View3/ZED_44377151_left_1762725566.180.jpg
+  4. View4/ZED_49045152_left_1762725566.180.jpg
+  5. View5/OAK_1762725566.419.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #77 (VLM update at idx 77)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725566.675.jpg
+  2. View2/ZED_49429257_left_1762725566.422.jpg
+  3. View3/ZED_44377151_left_1762725566.425.jpg
+  4. View4/ZED_49045152_left_1762725566.422.jpg
+  5. View5/OAK_1762725566.672.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle is positioned such that its tip is aligned with the red point.
+- required adjustment direction: No adjustment is needed as the needle is already aligned with the red point.
+- insertion readiness: Yes, the needle is ready for insertion into the red point.
+
+================================================================================
+Sample #78 (VLM update at idx 78)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725566.929.jpg
+  2. View2/ZED_49429257_left_1762725566.679.jpg
+  3. View3/ZED_44377151_left_1762725566.678.jpg
+  4. View4/ZED_49045152_left_1762725566.672.jpg
+  5. View5/OAK_1762725566.920.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle is positioned such that its tip is aligned with the red point.
+- required adjustment direction: No adjustment is needed as the needle is already aligned with the red point.
+- insertion readiness: Yes, the needle is ready for insertion into the red point.
+
+================================================================================
+Sample #79 (VLM update at idx 79)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725567.174.jpg
+  2. View2/ZED_49429257_left_1762725566.929.jpg
+  3. View3/ZED_44377151_left_1762725566.923.jpg
+  4. View4/ZED_49045152_left_1762725566.929.jpg
+  5. View5/OAK_1762725567.170.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #80 (VLM update at idx 80)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725567.429.jpg
+  2. View2/ZED_49429257_left_1762725567.178.jpg
+  3. View3/ZED_44377151_left_1762725567.177.jpg
+  4. View4/ZED_49045152_left_1762725567.173.jpg
+  5. View5/OAK_1762725567.423.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #81 (VLM update at idx 81)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725567.678.jpg
+  2. View2/ZED_49429257_left_1762725567.422.jpg
+  3. View3/ZED_44377151_left_1762725567.437.jpg
+  4. View4/ZED_49045152_left_1762725567.429.jpg
+  5. View5/OAK_1762725567.670.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle is positioned such that its tip is approaching the red point.
+- required adjustment direction: No adjustment is needed as the needle is already aligned with the red point.
+- insertion readiness: Yes, the needle is ready for insertion into the red point.
+
+================================================================================
+Sample #82 (VLM update at idx 82)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725568.180.jpg
+  2. View2/ZED_49429257_left_1762725567.679.jpg
+  3. View3/ZED_44377151_left_1762725567.674.jpg
+  4. View4/ZED_49045152_left_1762725567.674.jpg
+  5. View5/OAK_1762725567.926.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the surface.
+- needle alignment: The needle is positioned such that its tip is aligned with the center of the red point.
+- required adjustment direction: No adjustment is needed as the needle is already aligned with the red point.
+- insertion readiness: Yes, the needle is ready for insertion into the red point.
+
+================================================================================
+Sample #83 (VLM update at idx 83)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725568.424.jpg
+  2. View2/ZED_49429257_left_1762725567.936.jpg
+  3. View3/ZED_44377151_left_1762725567.924.jpg
+  4. View4/ZED_49045152_left_1762725567.940.jpg
+  5. View5/OAK_1762725568.170.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.
+- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.
+- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point.
+
+================================================================================
+Sample #84 (VLM update at idx 84)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725568.674.jpg
+  2. View2/ZED_49429257_left_1762725568.174.jpg
+  3. View3/ZED_44377151_left_1762725568.179.jpg
+  4. View4/ZED_49045152_left_1762725568.176.jpg
+  5. View5/OAK_1762725568.420.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.
+- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.
+- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point.
+
+================================================================================
+Sample #85 (VLM update at idx 85)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725568.922.jpg
+  2. View2/ZED_49429257_left_1762725568.428.jpg
+  3. View3/ZED_44377151_left_1762725568.423.jpg
+  4. View4/ZED_49045152_left_1762725568.423.jpg
+  5. View5/OAK_1762725568.671.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #86 (VLM update at idx 86)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725569.178.jpg
+  2. View2/ZED_49429257_left_1762725568.677.jpg
+  3. View3/ZED_44377151_left_1762725568.674.jpg
+  4. View4/ZED_49045152_left_1762725568.672.jpg
+  5. View5/OAK_1762725568.919.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the surface.
+- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.
+- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.
+- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point.
+
+================================================================================
+Sample #87 (VLM update at idx 87)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725569.429.jpg
+  2. View2/ZED_49429257_left_1762725568.925.jpg
+  3. View3/ZED_44377151_left_1762725568.929.jpg
+  4. View4/ZED_49045152_left_1762725568.923.jpg
+  5. View5/OAK_1762725569.173.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the surface.
+- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.
+- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.
+- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point.
+
+================================================================================
+Sample #88 (VLM update at idx 88)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725569.678.jpg
+  2. View2/ZED_49429257_left_1762725569.178.jpg
+  3. View3/ZED_44377151_left_1762725569.178.jpg
+  4. View4/ZED_49045152_left_1762725569.180.jpg
+  5. View5/OAK_1762725569.424.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the surface.
+- needle alignment: The needle is positioned such that its tip is approaching the red point.
+- required adjustment direction: The needle needs to be moved slightly towards the red point to ensure proper alignment.
+- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point.
+
+================================================================================
+Sample #89 (VLM update at idx 89)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725569.926.jpg
+  2. View2/ZED_49429257_left_1762725569.428.jpg
+  3. View3/ZED_44377151_left_1762725569.429.jpg
+  4. View4/ZED_49045152_left_1762725569.429.jpg
+  5. View5/OAK_1762725569.670.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle is positioned such that its tip is aligned with the center of the red point.
+- required adjustment direction: No adjustment is needed as the needle is already aligned with the red point.
+- insertion readiness: Yes, the needle is ready for insertion into the red point.
+
+================================================================================
+Sample #90 (VLM update at idx 90)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725570.177.jpg
+  2. View2/ZED_49429257_left_1762725569.673.jpg
+  3. View3/ZED_44377151_left_1762725569.673.jpg
+  4. View4/ZED_49045152_left_1762725569.674.jpg
+  5. View5/OAK_1762725569.920.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle is positioned above the red point, with its tip pointing towards it.
+- required adjustment direction: The needle needs to be moved slightly downward to align its tip directly over the red point.
+- insertion readiness: Yes, the needle is ready for insertion as it is aligned with the red point.
+
+================================================================================
+Sample #91 (VLM update at idx 91)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725570.431.jpg
+  2. View2/ZED_49429257_left_1762725569.926.jpg
+  3. View3/ZED_44377151_left_1762725569.925.jpg
+  4. View4/ZED_49045152_left_1762725569.925.jpg
+  5. View5/OAK_1762725570.170.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the target surface.
+- needle alignment: The needle tip is positioned above the red point, slightly to the right.
+- required adjustment direction: The needle needs to be moved slightly to the left and downward to align with the center of the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point center.
+
+================================================================================
+Sample #92 (VLM update at idx 92)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725570.680.jpg
+  2. View2/ZED_49429257_left_1762725570.182.jpg
+  3. View3/ZED_44377151_left_1762725570.175.jpg
+  4. View4/ZED_49045152_left_1762725570.184.jpg
+  5. View5/OAK_1762725570.425.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the surface.
+- needle alignment: The needle is positioned such that its tip is aligned with the center of the red point.
+- required adjustment direction: No adjustment is needed as the needle is already aligned with the red point.
+- insertion readiness: Yes, the needle is ready for insertion into the red point.
+
+================================================================================
+Sample #93 (VLM update at idx 93)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725570.930.jpg
+  2. View2/ZED_49429257_left_1762725570.423.jpg
+  3. View3/ZED_44377151_left_1762725570.425.jpg
+  4. View4/ZED_49045152_left_1762725570.423.jpg
+  5. View5/OAK_1762725570.670.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #94 (VLM update at idx 94)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725571.178.jpg
+  2. View2/ZED_49429257_left_1762725570.683.jpg
+  3. View3/ZED_44377151_left_1762725570.683.jpg
+  4. View4/ZED_49045152_left_1762725570.678.jpg
+  5. View5/OAK_1762725570.920.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned directly above the red point.
+- required adjustment direction: No adjustment is needed as the needle is already aligned with the red point.
+- insertion readiness: Yes, the needle is ready for insertion into the red point.
+
+================================================================================
+Sample #95 (VLM update at idx 95)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725571.422.jpg
+  2. View2/ZED_49429257_left_1762725570.927.jpg
+  3. View3/ZED_44377151_left_1762725570.930.jpg
+  4. View4/ZED_49045152_left_1762725570.930.jpg
+  5. View5/OAK_1762725571.171.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #96 (VLM update at idx 96)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725571.675.jpg
+  2. View2/ZED_49429257_left_1762725571.173.jpg
+  3. View3/ZED_44377151_left_1762725571.208.jpg
+  4. View4/ZED_49045152_left_1762725571.178.jpg
+  5. View5/OAK_1762725571.427.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the optical table.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
+================================================================================
+Sample #97 (VLM update at idx 97)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725571.923.jpg
+  2. View2/ZED_49429257_left_1762725571.432.jpg
+  3. View3/ZED_44377151_left_1762725571.422.jpg
+  4. View4/ZED_49045152_left_1762725571.425.jpg
+  5. View5/OAK_1762725571.675.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the surface.
+- needle alignment: The needle is positioned such that its tip is aligned with the center of the red point.
+- required adjustment direction: No adjustment is needed as the needle is already aligned with the red point.
+- insertion readiness: Yes, the needle is ready for insertion into the red point.
+
+================================================================================
+Sample #98 (VLM update at idx 98)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725572.175.jpg
+  2. View2/ZED_49429257_left_1762725571.672.jpg
+  3. View3/ZED_44377151_left_1762725571.685.jpg
+  4. View4/ZED_49045152_left_1762725571.684.jpg
+  5. View5/OAK_1762725571.919.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the surface.
+- needle alignment: The needle is positioned such that its tip is aligned with the center of the red point.
+- required adjustment direction: No adjustment is needed as the needle is already aligned with the red point.
+- insertion readiness: Yes, the needle is ready for insertion into the red point.
+
+================================================================================
+Sample #99 (VLM update at idx 99)
+================================================================================
+
+Images (5 views):
+  1. View1/ZED_41182735_left_1762725572.422.jpg
+  2. View2/ZED_49429257_left_1762725571.928.jpg
+  3. View3/ZED_44377151_left_1762725571.928.jpg
+  4. View4/ZED_49045152_left_1762725571.924.jpg
+  5. View5/OAK_1762725572.176.jpg
+
+VLM Response:
+- target visibility: Yes, the red point is clearly visible on the surface.
+- needle alignment: The needle tip is positioned above the red point.
+- required adjustment direction: The needle needs to be moved downward towards the red point.
+- insertion readiness: No, the needle is not yet aligned with the red point.
+
