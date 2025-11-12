@@ -20,7 +20,7 @@ CHECKPOINT="../checkpoints/flow_matching_latest.pt"
 ROBOT_IP="10.130.41.111"
 MODEL_TYPE="flow_matching"
 FLOW_STEPS=10
-VL_REUSE=4
+VL_REUSE=1
 TASK_NAME="Red_point"
 
 # Default start joint positions (degrees)

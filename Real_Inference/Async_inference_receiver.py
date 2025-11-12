@@ -575,15 +575,26 @@ class AsyncVLAInferenceEngine:
         self.task_name = task_name
 
         # Generate instruction prompt (same format as training dataset)
-        self.text_prompt = (
-            f"You are an expert robot operator for a delicate insertion task. "
-            f"Your goal is to guide the robot to insert its tool into the '{task_name}' target. "
-            f"Analyze the image and determine the next action. "
-            f"Output your analysis in this format: "
-            f"1) Target Analysis: [FULLY_VISIBLE/PARTIALLY_VISIBLE/NOT_VISIBLE], [FAR/MID/NEAR/TOUCHING]. "
-            f"2) Current State: [Briefly describe the tool-target relationship]. "
-            f"3) Next Action: [Choose ONE: MOVE_FORWARD, MOVE_BACKWARD, MOVE_LEFT, MOVE_RIGHT, MOVE_UP, MOVE_DOWN, ROTATE_CW, ROTATE_CCW, ALIGN_TARGET, INSERT, STOP]. "
-            f"4) Confidence: [HIGH/MEDIUM/LOW]."
+        self.text_prompt = (f"""Respond ONLY with the next action.
+Environment Context:
+- This is a Meca500 robot workspace.
+- The end-effector holds a needle; the needle tip is the tool.
+- The scene is an optical table with many holes, but these are NOT targets.
+- The ONLY true insertion target is the {task_name}.
+
+Task:
+You must analyze the five camera views and determine the needle’s relative position to the {task_name}.
+Identify:
+1) needle tip location
+2) alignment relative to the {task_name} center
+3) required direction to align for insertion
+
+Respond with:
+- target visibility
+- needle alignment
+- required adjustment direction
+- insertion readiness (yes/no)
+"""
         )
 
         print(f"\n{'='*80}")
@@ -604,7 +615,7 @@ class AsyncVLAInferenceEngine:
             print(f"Flow Steps: {config.FLOW_STEPS}, Solver: {config.FLOW_SOLVER}")
 
         # Load model
-        # IMPORTANT: sensor_output_dim must match checkpoint (2048 for existing checkpoints)
+        # IMPORTANT: Parameters must match training script (TRAIN_FlowMatching.py:804-816)
         self.model = QwenVLAUnified(
             model_type=config.MODEL_TYPE,
             vl_model_name=config.MODEL_NAME,
@@ -614,12 +625,13 @@ class AsyncVLAInferenceEngine:
             cache_dir=config.CACHE_DIR,
             finetune_vl="none",
             sensor_enabled=config.SENSOR_ENABLED,
+            sensor_encoder_type='force_aware',  # ✅ Match training script
             sensor_input_channels=config.SENSOR_INPUT_CHANNELS,
             sensor_temporal_length=config.SENSOR_TEMPORAL_LENGTH,
-            sensor_output_dim=2048,  # Must match checkpoint! (was 3072)
+            sensor_output_dim=1024,  # ✅ Must match training script! (was 2048)
             robot_state_enabled=config.ROBOT_STATE_ENABLED,
             robot_state_temporal_length=config.ROBOT_STATE_BUFFER_LENGTH,  # 100 samples @ 100Hz
-            fusion_strategy=config.FUSION_STRATEGY,
+            robot_state_output_dim=512,  # ✅ Match training script
             image_resize_height=config.IMAGE_RESIZE_HEIGHT,
             image_resize_width=config.IMAGE_RESIZE_WIDTH,
             flow_steps=config.FLOW_STEPS if config.MODEL_TYPE == 'flow_matching' else 10,
@@ -634,11 +646,69 @@ class AsyncVLAInferenceEngine:
         if checkpoint_path and Path(checkpoint_path).exists():
             print(f"Loading checkpoint: {checkpoint_path}")
             checkpoint = torch.load(checkpoint_path, map_location=self.device)
+
+            # Extract state dict
             if 'model_state_dict' in checkpoint:
-                self.model.load_state_dict(checkpoint['model_state_dict'], strict=False)
+                checkpoint_state = checkpoint['model_state_dict']
             else:
-                self.model.load_state_dict(checkpoint, strict=False)
-            print("✅ Checkpoint loaded successfully")
+                checkpoint_state = checkpoint
+
+            # Get current model's state dict to check for size mismatches
+            current_state = self.model.state_dict()
+
+            # Filter out incompatible keys (size mismatch)
+            compatible_state = {}
+            incompatible_keys = []
+            size_mismatches = []
+
+            for key, value in checkpoint_state.items():
+                if key in current_state:
+                    if value.shape == current_state[key].shape:
+                        compatible_state[key] = value
+                    else:
+                        incompatible_keys.append(key)
+                        size_mismatches.append(f"{key}: {value.shape} -> {current_state[key].shape}")
+                else:
+                    # Key doesn't exist in current model
+                    incompatible_keys.append(key)
+
+            # Load only compatible weights
+            missing_keys, unexpected_keys = self.model.load_state_dict(compatible_state, strict=False)
+
+            # Report what was loaded/skipped
+            print("✅ Checkpoint loaded with compatibility mode:")
+
+            if size_mismatches:
+                print(f"   ⚠️ Size mismatches (skipped): {len(size_mismatches)} keys")
+                # Show first few mismatches
+                for mismatch in size_mismatches[:3]:
+                    print(f"      {mismatch}")
+                if len(size_mismatches) > 3:
+                    print(f"      ... and {len(size_mismatches) - 3} more")
+
+            if missing_keys:
+                print(f"   ⚠️ Missing keys (random init): {len(missing_keys)} keys")
+                # Print only sensor/robot related missing keys for brevity
+                relevant_missing = [k for k in missing_keys if 'sensor' in k or 'robot' in k]
+                if relevant_missing:
+                    print(f"      Sensor/Robot related: {relevant_missing[:5]}{'...' if len(relevant_missing) > 5 else ''}")
+
+            if unexpected_keys:
+                print(f"   ⚠️ Unexpected keys (ignored): {len(unexpected_keys)} keys")
+
+            # Check if critical components were loaded
+            vl_keys_loaded = sum(1 for k in compatible_state.keys() if 'vl_encoder' in k or 'vl_model' in k)
+            action_keys_loaded = sum(1 for k in compatible_state.keys() if 'action_expert' in k)
+            sensor_keys_loaded = sum(1 for k in compatible_state.keys() if 'sensor_encoder' in k or 'sensor_proj' in k)
+            robot_keys_loaded = sum(1 for k in compatible_state.keys() if 'robot_state' in k)
+
+            print(f"   ✅ VL Encoder: {vl_keys_loaded} parameters loaded")
+            print(f"   ✅ Action Expert: {action_keys_loaded} parameters loaded")
+            print(f"   ℹ️ Sensor Encoder: {sensor_keys_loaded} parameters loaded (may need fine-tuning)")
+            print(f"   ℹ️ Robot Encoder: {robot_keys_loaded} parameters loaded (may need fine-tuning)")
+
+            if len(incompatible_keys) > 0:
+                print(f"   ⚠️ Note: {len(incompatible_keys)} incompatible parameters will use random initialization")
 
         self.model = self.model.to(self.device)
         self.model.eval()
