@@ -314,8 +314,8 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
     --load_robot_state_encoder_checkpoint "./checkpoints/robot_state_mae_best.pth" \
     --vlm_reuse_count 1 \
     --cache_root "/home/najo/NAS/VLA/dataset/cache/qwen_vl_features" \
-    --skip_dataset_stats
-    # --resume $FM_CHECKPOINT
+    --skip_dataset_stats \
+    --resume "./checkpoints/flow_matching_latest.pt"
 
 echo "=============== FLOW MATCHING STAGE 1 COMPLETE ==============="
 echo ""
@@ -337,6 +337,29 @@ torchrun --nproc_per_node=4 TRAIN_FlowMatching.py \
     --load_sensor_encoder_checkpoint "./checkpoints/sensor_clip_latest.pth" \
     --load_robot_state_encoder_checkpoint "./checkpoints/robot_state_mae_best.pth" \
     --num_workers 4 \
+    --skip_dataset_stats \
+    --resume "./checkpoints/flow_matching_latest.pt"
+
+CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
+    --nproc_per_node=4 \
+    --master_port=29503 \
+    TRAIN_FlowMatching.py \
+    --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset3" \
+    --epochs 50 \
+    --batch_size 32 \
+    --grad_accum 2 \
+    --lr 1e-4 \
+    --min_lr 1e-6 \
+    --image_resize_height 360 \
+    --image_resize_width 640 \
+    --sensor_enabled \
+    --num_workers 4 \
+    --fusion_strategy "cross_attention" \
+    --finetune_vl none \
+    --val_split 0.05 \
+    --load_sensor_encoder_checkpoint "./checkpoints/sensor_clip_latest.pth" \
+    --load_robot_state_encoder_checkpoint "./checkpoints/robot_state_mae_best.pth" \
+    --vlm_reuse_count 1 \
     --skip_dataset_stats \
     --resume "./checkpoints/flow_matching_latest.pt"
 

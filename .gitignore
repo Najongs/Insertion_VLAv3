@@ -9,7 +9,7 @@ cache/
 checkpoints/
 .claude/
 wandb/
-
+async_inference_*/
 # Distribution / packaging
 .Python
 build/
