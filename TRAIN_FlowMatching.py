@@ -375,6 +375,7 @@ def Train_FlowMatching(
     start_epoch=0,
     sensor_enabled=True,
     sensor_loss_weight=2.0,
+    finetune_vl='none',
 ):
     """Flow Matching training loop - OPTIMIZED"""
     rank = dist.get_rank()
@@ -633,6 +634,7 @@ def Train_FlowMatching(
                 "optimizer_state_dict": optimizer.state_dict(),
                 "scheduler_state_dict": scheduler.state_dict() if scheduler else None,
                 "val_loss": val_loss,
+                "finetune_vl": finetune_vl,  # Save current training mode
             }
 
             is_best = val_loss is not None and val_loss < best_val_loss
@@ -947,21 +949,32 @@ def main():
         # Load model state, but be careful about frozen parts
         model.module.load_state_dict(state_dict, strict=False)
 
-        # Check if we're switching to LoRA mode (new trainable parameters added)
-        switching_to_lora = args.finetune_vl == 'lora'
+        # Check if training mode has changed (LoRA -> normal or normal -> LoRA)
+        # This affects which parameters are trainable, so optimizer state won't match
+        prev_finetune_mode = ckpt.get("finetune_vl", None)  # Get saved mode from checkpoint
+        current_finetune_mode = args.finetune_vl
+        mode_changed = prev_finetune_mode is not None and prev_finetune_mode != current_finetune_mode
 
-        # Only load optimizer state if there's no size mismatch AND not switching to LoRA
-        # (LoRA adds new trainable parameters, so optimizer state won't match)
-        skip_optimizer = has_size_mismatch or switching_to_lora
+        # Only load optimizer state if there's no size mismatch AND training mode hasn't changed
+        skip_optimizer = has_size_mismatch or mode_changed
 
         if not skip_optimizer:
-            optimizer.load_state_dict(ckpt["optimizer_state_dict"])
-            if scheduler and ckpt.get("scheduler_state_dict"):
-                scheduler.load_state_dict(ckpt["scheduler_state_dict"])
+            try:
+                optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+                if scheduler and ckpt.get("scheduler_state_dict"):
+                    scheduler.load_state_dict(ckpt["scheduler_state_dict"])
+                if rank == 0:
+                    print(f"   ✅ Optimizer and scheduler state loaded successfully.")
+            except (ValueError, KeyError, RuntimeError) as e:
+                # Optimizer state doesn't match (e.g., different trainable parameters)
+                if rank == 0:
+                    print(f"   ⚠️ Failed to load optimizer state: {e}")
+                    print(f"   🔧 Starting with fresh optimizer (trainable parameters may have changed).")
+                skip_optimizer = True
         else:
             if rank == 0:
-                if switching_to_lora:
-                    print(f"   🔧 Switching to LoRA fine-tuning mode - optimizer will start fresh with new LoRA parameters.")
+                if mode_changed:
+                    print(f"   🔧 Training mode changed ({prev_finetune_mode} -> {current_finetune_mode}) - optimizer will start fresh.")
                 else:
                     print(f"   ⚠️ Skipping optimizer/scheduler state loading due to size mismatch. Training will start fresh.")
 
@@ -972,7 +985,7 @@ def main():
         model=model, data_loader=train_loader, optimizer=optimizer, num_epochs=args.epochs,
         grad_accum_steps=args.grad_accum, device=device, scheduler=scheduler, sched_on=args.sched_on,
         val_loader=val_loader, start_epoch=start_epoch, sensor_enabled=args.sensor_enabled,
-        sensor_loss_weight=args.sensor_loss_weight,
+        sensor_loss_weight=args.sensor_loss_weight, finetune_vl=args.finetune_vl,
     )
 
     dist.destroy_process_group()
