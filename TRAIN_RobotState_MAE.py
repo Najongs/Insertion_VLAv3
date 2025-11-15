@@ -33,6 +33,14 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
 
+torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.deterministic = True
+seed = 42
+random.seed(seed)
+np.random.seed(seed)
+torch.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)
+
 # Add project root to import custom modules
 import sys
 PROJECT_ROOT = Path(__file__).parent
@@ -53,7 +61,10 @@ class MAERobotStateModel(nn.Module):
         self.encoder = encoder
         self.encoder_dim = encoder.model_dim
         self.decoder_dim = decoder_dim
-        self.output_dim = encoder.input_dim # Should be 12
+        self.output_dim = encoder.input_dim  # Should be 12
+
+        # Learnable mask token (B, T, D_in)로 브로드캐스트용
+        self.mask_token = nn.Parameter(torch.zeros(1, 1, self.output_dim))
 
         # Decoder head
         self.decoder = nn.Sequential(
@@ -105,14 +116,14 @@ class RobotStateAugmentation:
         augmented = robot_states.clone()
 
         # 1. Gaussian noise (25% probability)
-        if np.random.random() < 0.25:
+        if np.random.random() < 0.10:
             noise = torch.randn_like(augmented) * self.noise_std
             # Joint angles (0-5): smaller noise
-            noise[:, :6] *= 0.5
+            noise[:, :6] *= 0.2
             augmented += noise
 
         # 2. Magnitude scaling (30% probability)
-        if np.random.random() < 0.30:
+        if np.random.random() < 0.10:
             # Joint scaling
             joint_scale = np.random.uniform(*self.joint_scale_range)
             augmented[:, :6] *= joint_scale
@@ -135,37 +146,58 @@ class RobotStateAugmentation:
 class RobotStateDataset(Dataset):
     """
     Dataset that provides windows of robot state data from .npz files.
+    Includes normalization for stable training.
     """
     def __init__(self, root_dir: str, window_size: int = 60, step: int = 10,
-                 use_augmentation: bool = True):
+                 use_augmentation: bool = True, normalize: bool = True):
         self.window_size = window_size
         self.step = step
         self.data_files = []
+        self.normalize = normalize
 
         # Data augmentation
         self.use_augmentation = use_augmentation
         self.is_training = True  # Training mode by default
         if self.use_augmentation:
             self.augmentation = RobotStateAugmentation()
-        
+
         print(f"Scanning for robot_states.npz in {root_dir}...")
         # Find all robot_states.npz files recursively
         for path in Path(root_dir).rglob('robot_states.npz'):
             self.data_files.append(path)
-        
+
         print(f"Found {len(self.data_files)} robot_states.npz files.")
-        
+
         self.windows = []
+        all_data = []
         for file_path in tqdm(self.data_files, desc="Creating windows"):
             try:
                 # Load the data using mmap_mode for memory efficiency
                 data = np.load(file_path, mmap_mode='r')['robot_states']
-                
+
+                # Collect data for computing normalization statistics
+                if normalize:
+                    all_data.append(data)
+
                 # Create sliding windows
                 for i in range(0, len(data) - self.window_size + 1, self.step):
                     self.windows.append((file_path, i))
             except Exception as e:
                 print(f"Warning: Could not load or process {file_path}: {e}")
+
+        # Compute normalization statistics
+        if normalize and len(all_data) > 0:
+            all_data_concat = np.concatenate(all_data, axis=0)
+            self.mean = torch.from_numpy(all_data_concat.mean(axis=0).astype(np.float32))
+            self.std = torch.from_numpy(all_data_concat.std(axis=0).astype(np.float32) + 1e-6)
+            print(f"📊 Data normalization statistics computed:")
+            print(f"   Joints mean: {self.mean[:6].numpy()}")
+            print(f"   Joints std: {self.std[:6].numpy()}")
+            print(f"   Pose mean: {self.mean[6:].numpy()}")
+            print(f"   Pose std: {self.std[6:].numpy()}")
+        else:
+            self.mean = None
+            self.std = None
 
     def train(self):
         """Enable augmentation for training"""
@@ -186,6 +218,10 @@ class RobotStateDataset(Dataset):
 
         window = data[start_idx : start_idx + self.window_size]
         window_tensor = torch.from_numpy(window.astype(np.float32))
+
+        # Apply normalization
+        if self.normalize and self.mean is not None and self.std is not None:
+            window_tensor = (window_tensor - self.mean) / self.std
 
         # Apply augmentation (only during training)
         if self.use_augmentation and self.is_training:
@@ -252,19 +288,21 @@ def compute_weighted_mse_loss(pred, target, mask, joint_weight=1.0, pose_weight=
 
     mask_joints = mask[..., :6]
     mask_pose = mask[..., 6:]
+    
+    device = pred.device
+    zero = torch.zeros((), device=device)
 
     # Compute individual losses
     if mask_joints.any():
         loss_joints = F.mse_loss(pred_joints[mask_joints], target_joints[mask_joints])
     else:
-        loss_joints = 0.0
+        loss_joints = zero  # Tensor로 유지
 
     if mask_pose.any():
         loss_pose = F.mse_loss(pred_pose[mask_pose], target_pose[mask_pose])
     else:
-        loss_pose = 0.0
+        loss_pose = zero    # Tensor로 유지
 
-    # Weighted combination
     total_loss = joint_weight * loss_joints + pose_weight * loss_pose
 
     return total_loss, loss_joints, loss_pose
@@ -321,14 +359,18 @@ def main(args):
         batch_size=args.batch_size,
         sampler=train_sampler,
         num_workers=args.num_workers,
-        pin_memory=True
+        pin_memory=True,
+        drop_last=True,                 # 각 rank 배치 수 정렬
+        persistent_workers=(args.num_workers > 0)
     )
-    # Validation loader runs on all processes, but we only need results from the main one
+    val_sampler = DistributedSampler(val_dataset, shuffle=False, drop_last=False)
     val_loader = DataLoader(
         val_dataset,
-        batch_size=args.batch_size * 2, # Can use larger batch for validation
+        batch_size=args.batch_size * 2,
+        sampler=val_sampler,
         num_workers=args.num_workers,
-        pin_memory=True
+        pin_memory=True,
+        persistent_workers=(args.num_workers > 0)
     )
 
     if is_main_process:
@@ -372,21 +414,23 @@ def main(args):
 
         train_progress_bar = tqdm(train_loader, desc=f"Epoch {epoch + 1}/{args.epochs} [Train]", disable=not is_main_process)
 
-        for batch in train_progress_bar:
+        optimizer.zero_grad(set_to_none=True)
+        for step, batch in enumerate(train_progress_bar, start=1):
             original_data = batch.to(device, non_blocking=True)
             B, T, D = original_data.shape
 
-            optimizer.zero_grad()
-
             # Create mask
-            num_masked = int(args.mask_ratio * T)
+            num_masked = max(1, int(args.mask_ratio * T))  # 최소 1
             masked_indices = torch.rand(original_data.shape[:2], device=device).topk(k=num_masked, dim=-1).indices
-            
+
             masked_input = original_data.clone()
             loss_mask = torch.zeros_like(original_data, dtype=torch.bool)
 
             batch_indices = torch.arange(B, device=device).unsqueeze(-1)
-            masked_input[batch_indices, masked_indices] = 0.0
+            mask_tok = model.module.mask_token.expand(B, masked_indices.shape[1], original_data.shape[-1]).to(device)
+
+            # gather 방식으로 치환 위치에만 mask token 주입
+            masked_input[batch_indices, masked_indices] = mask_tok
             loss_mask[batch_indices, masked_indices] = True
 
             # Forward pass
@@ -396,11 +440,14 @@ def main(args):
                 joint_weight=args.joint_weight, pose_weight=args.pose_weight
             )
 
-            loss.backward()
-            optimizer.step()
-
-            if scheduler is not None and args.sched_on == "step":
-                scheduler.step()
+            (loss / args.grad_accum).backward()
+            if step % args.grad_accum == 0:
+                # Gradient clipping to prevent explosion
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                optimizer.step()
+                optimizer.zero_grad(set_to_none=True)
+                if scheduler is not None and args.sched_on == "step":
+                    scheduler.step()
 
             if is_main_process:
                 train_progress_bar.set_postfix(
@@ -409,6 +456,7 @@ def main(args):
                     p_loss=loss_pose if isinstance(loss_pose, float) else loss_pose.item()
                 )
 
+        # 에폭 스케줄러는 에폭당 1회만
         if scheduler is not None and args.sched_on == "epoch":
             scheduler.step()
 
@@ -429,14 +477,16 @@ def main(args):
 
                 # In validation, we can reconstruct the whole sequence to check general performance
                 # or stick to the same masking strategy. Sticking to masking is a better test.
-                num_masked = int(args.mask_ratio * T)
+                num_masked = max(1, int(args.mask_ratio * T))
                 masked_indices = torch.rand(original_data.shape[:2], device=device).topk(k=num_masked, dim=-1).indices
-                
+
                 masked_input = original_data.clone()
                 loss_mask = torch.zeros_like(original_data, dtype=torch.bool)
 
                 batch_indices = torch.arange(B, device=device).unsqueeze(-1)
-                masked_input[batch_indices, masked_indices] = 0.0
+                # Use mask_token for consistency with training
+                mask_tok = model.module.mask_token.expand(B, masked_indices.shape[1], original_data.shape[-1]).to(device)
+                masked_input[batch_indices, masked_indices] = mask_tok
                 loss_mask[batch_indices, masked_indices] = True
 
                 reconstructed_data = model(masked_input)
@@ -448,7 +498,11 @@ def main(args):
                 total_val_loss += val_loss.item() * B
                 val_count += B
 
-        avg_val_loss = total_val_loss / val_count
+        tensor = torch.tensor([total_val_loss, val_count], device=device, dtype=torch.float64)
+        dist.all_reduce(tensor, op=dist.ReduceOp.SUM)
+        global_val_loss, global_count = tensor.tolist()
+        avg_val_loss = global_val_loss / max(1.0, global_count)
+
         if is_main_process:
             print(f"Epoch {epoch + 1} Validation Loss: {avg_val_loss:.4f}")
 

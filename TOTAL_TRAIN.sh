@@ -36,23 +36,23 @@ set -e
 #
 # =============================================================================
 
-NUM_GPUS=4
+# 트레젝토리 시각화
+# python3 visualize_trajectory.py \
+#     "/home/najo/NAS/VLA/dataset/New_dataset2/Red_point/data_collection_20251108_061254" \
+#     --sample_idx 10 --save_dir ./trajectory_plots
 
-ROBOT_PRETRAIN_EPOCHS=200
-TEXT_PREVIEW_COUNT=100
-TEXT_CACHE_DIR="/home/najo/NAS/VLA/Insertion_VLAv3/cache/vlm_text"
+# NUM_GPUS=4
 
-ROBOT_STATE_MAE_CHECKPOINT=
+# ROBOT_PRETRAIN_EPOCHS=200
+# TEXT_PREVIEW_COUNT=100
+# VAL_SPLIT=0.05
 
+# DATASET_PATHS=(
+#     "/home/najo/NAS/VLA/dataset/New_dataset2"
+#     "/home/najo/NAS/VLA/dataset/New_dataset3"
+# )
 
-VAL_SPLIT=0.05
-
-DATASET_PATHS=(
-    "/home/najo/NAS/VLA/dataset/New_dataset2"
-    "/home/najo/NAS/VLA/dataset/New_dataset3"
-)
-
-CACHE_ROOT="/home/najo/NAS/VLA/dataset/cache"
+# CACHE_ROOT="/home/najo/NAS/VLA/dataset/cache"
 
 # CLIP training parameters
 
@@ -66,32 +66,32 @@ CACHE_ROOT="/home/najo/NAS/VLA/dataset/cache"
 # echo ""
 # echo "=============== 1.1 ROBOT STATE ENCODER PRE-TRAINING (MAE) ==============="
 # echo "Epochs: $ROBOT_PRETRAIN_EPOCHS, Batch Size: 64, Window Size: 100, Mask Ratio: 0.5"
-CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
-    --nproc_per_node=4 \
-    --master_port=29502 \
-    TRAIN_RobotState_MAE.py \
-    --epochs 200 \
-    --batch_size 32 \
-    --learning_rate 1e-4 \
-    --weight_decay 0.01 \
-    --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset3" "/home/najo/NAS/VLA/dataset/New_dataset2" \
-    --val_split 0.05 \
-    --window_size 100 \
-    --mask_ratio 0.2 \
-    --model_dim 256 \
-    --num_heads 8 \
-    --num_layers 4 \
-    --output_dim 512 \
-    --min_lr 1e-6 \
-    --warmup_ratio 0.03 \
-    --hold_ratio 0.02 \
-    --sched_on step \
-    --grad_accum 1 \
-    --num_workers 4 \
-    --joint_weight 1.0 \
-    --pose_weight 2.0 \
-    --checkpoint_dir ./checkpoints \
-    --resume_from "./checkpoints/robot_state_mae_best.pth"
+# CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
+#     --nproc_per_node=4 \
+#     --master_port=29510 \
+#     TRAIN_RobotState_MAE.py \
+#     --epochs 200 \
+#     --batch_size 32 \
+#     --learning_rate 1e-4 \
+#     --weight_decay 0.01 \
+#     --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset3" "/home/najo/NAS/VLA/dataset/New_dataset2" "/home/najo/NAS/VLA/dataset/New_dataset4"\
+#     --val_split 0.1 \
+#     --window_size 100 \
+#     --mask_ratio 0.75 \
+#     --model_dim 512 \
+#     --num_heads 8 \
+#     --num_layers 4 \
+#     --output_dim 1024 \
+#     --min_lr 1e-6 \
+#     --warmup_ratio 0.03 \
+#     --hold_ratio 0.02 \
+#     --sched_on step \
+#     --grad_accum 1 \
+#     --num_workers 4 \
+#     --joint_weight 1.0 \
+#     --pose_weight 1.0 \
+#     --checkpoint_dir ./checkpoints \
+#     --resume_from "./checkpoints/robot_state_mae_best.pth"
 
 # echo "=============== ROBOT STATE ENCODER PRE-TRAINING COMPLETE ==============="
 # echo ""
@@ -104,23 +104,39 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
 #     --vlm_model Qwen/Qwen2.5-VL-3B-Instruct
 
 # ========================================================================
-# NOTE: CLIP VLM Cache Building is now AUTOMATIC
+# NOTE: CLIP VLM Cache Building (Required before training)
 # ========================================================================
-CUDA_VISIBLE_DEVICES=0,1 torchrun \
-    --nproc_per_node=2 \
+# IMPORTANT: This step is REQUIRED after changing CLIP_PROMPT_TEXT or adding new datasets
+# - Generates task-specific CLIP VLM caches (each task has its own prompt hash)
+# - Supports multi-view images (View5 + View4)
+# - Automatically skips existing caches (only generates missing ones)
+# - Expected time: 1-2 hours for ~100 episodes (first run), much faster for incremental updates
+# ========================================================================
+
+echo ""
+echo "=============== 1.0 CLIP VLM CACHE BUILDING ==============="
+echo "Building CLIP VLM feature cache for new datasets..."
+echo "Strategy: Skip existing caches, only generate missing ones"
+echo ""
+
+CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
+    --nproc_per_node=4 \
     --master_port=29500 \
     cache_clip_vlm_features.py \
-    --new_dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset2/*_point" \
+    --new_dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset4/Eye_trocar"\
     --cache_root "/home/najo/NAS/VLA/dataset/cache" \
-    --vlm_model "Qwen/Qwen2.5-VL-3B-Instruct" \
+    --vlm_model "Qwen/Qwen2.5-VL-7B-Instruct" \
     --batch_size 16 \
-    --num_workers 4
-# ========================================================================
+    --num_workers 8
+
+echo ""
+echo "=============== CLIP VLM CACHE BUILDING COMPLETE ==============="
+echo ""
 
 echo ""
 echo "=============== 1.1 SENSOR ENCODER PRE-TRAINING (CLIP) ==============="
 echo "Epochs: $SENSOR_PRETRAIN_EPOCHS, Batch Size: $PRETRAIN_BATCH_SIZE, Sensor Window: 65"
-echo "VLM Model (for cache building if needed): Qwen/Qwen2.5-VL-3B-Instruct"
+echo "VLM Model (for cache building if needed): Qwen/Qwen2.5-VL-7B-Instruct"
 echo "Cache Root: $CACHE_ROOT/clip_vlm_features"
 echo ""
 echo "NOTE: CLIP VLM cache must already exist (run cache_clip_vlm_features.py separately if needed)"
@@ -130,28 +146,29 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
     --nproc_per_node=4 \
     --master_port=29501 \
     TRAIN_SensorImage_CLIP.py \
-    --epochs 100 \
-    --batch_size 4 \
+    --epochs 50 \
+    --batch_size 8 \
     --learning_rate 1e-4 \
-    --new_dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset3/*_point" "/home/najo/NAS/VLA/dataset/New_dataset2/*_point"\
+    --new_dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset3/*_point" "/home/najo/NAS/VLA/dataset/New_dataset2/*_point" "/home/najo/NAS/VLA/dataset/New_dataset4/Eye_trocar"\
     --val_split 0.05 \
-    --vlm_model "Qwen/Qwen2.5-VL-3B-Instruct" \
+    --vlm_model "Qwen/Qwen2.5-VL-7B-Instruct" \
     --sensor_window_size 65 \
     --sensor_output_dim 1024 \
     --embedding_dim 512 \
-    --min_lr 1e-5 \
+    --intermediate_vlm_dim 1536 \
+    --min_lr 1e-6 \
     --grad_accum 2 \
-    --num_workers 4 \
+    --num_workers 8 \
     --cache_root "/home/najo/NAS/VLA/dataset/cache" \
     --checkpoint_dir ./checkpoints \
     --find_unused_parameters \
-    --resume_from "./checkpoints/sensor_clip_latest.pth"
-
+    --cache_only_mode
 
 echo ""
 echo "=============== SENSOR ENCODER PRE-TRAINING COMPLETE ==============="
 echo ""
-
+    # --skip_dataset_stats \
+    # --skip_cache_verification \
 
 # TOTAL_MAIN_EPOCHS=100
 # STAGE1_RATIO=0.5 # 90% of training with cache
@@ -175,8 +192,6 @@ MAIN_BATCH_SIZE=8
 CACHE_ROOT="/home/najo/NAS/VLA/dataset/cache"
 QWEN_CACHE_ROOT="$CACHE_ROOT/qwen_vl_features"
 
-
-
 ## VL 답변 확인용
 # python preview_vlm_responses.py \
 #     --episode_dir /home/najo/NAS/VLA/dataset/New_dataset3/Red_point/data_collection_20251110_065907 \
@@ -188,33 +203,33 @@ QWEN_CACHE_ROOT="$CACHE_ROOT/qwen_vl_features"
 # =================================================================
 # 3.0 VL CACHE BUILDING (REQUIRED FOR CACHE MODE)
 # =================================================================
-echo ""
-echo "=============== 0. VL CACHE BUILDING ==============="
-echo "Building VL feature cache for faster training..."
-
-echo "🔍 캐시 생성 설정:"
-echo "   - 데이터셋: New_dataset2, New_dataset3 (모든 태스크)"
-echo "   - vlm_reuse_count: 3"
-echo "   - 예상 소요 시간: 30분~1시간"
-echo ""
-
-CUDA_VISIBLE_DEVICES=0,1 torchrun \
-    --nproc_per_node=2 \
+# echo ""
+# echo "=============== 0. VL CACHE BUILDING ==============="
+# echo "Building VL feature cache for faster training..."
+#
+# echo "🔍 캐시 생성 설정:"
+# echo "   - 데이터셋: New_dataset2, New_dataset3 (모든 태스크)"
+# echo "   - vlm_reuse_count: 3"
+# echo "   - 예상 소요 시간: 30분~1시간"
+# echo ""
+#
+# # VL Cache building doesn't use DeepSpeed (not a training step)
+CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
+    --nproc_per_node=4 \
     --master_port=29502 \
     TRAIN_FlowMatching.py \
     --mode cache \
-    --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset3/*_point" "/home/najo/NAS/VLA/dataset/New_dataset2/*_point" \
+    --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset4/Eye_trocar"\
     --batch_size 8 \
     --num_workers 8 \
     --image_resize_height 360 \
     --image_resize_width 640 \
     --cache_loader_only \
     --vlm_reuse_count 1 \
-    --cache_root "/home/najo/NAS/VLA/dataset/cache/qwen_vl_features" \
-    --skip_dataset_stats
-
-echo "=============== VL CACHE BUILDING COMPLETE ==============="
-echo ""
+    --cache_root "/home/najo/NAS/VLA/dataset/cache/qwen_vl_features"
+#
+# echo "=============== VL CACHE BUILDING COMPLETE ==============="
+# echo ""
 
 # =================================================================
 # 3.1 MAIN VLA TRAINING (REGRESSION)
@@ -231,30 +246,30 @@ IMG_WIDTH=640
 # echo "=============== 2.1 REGRESSION TRAINING (STAGE 1: CACHE) ==============="
 # echo "Epochs: $STAGE1_EPOCHS, Batch Size: $MAIN_BATCH_SIZE, Grad Accum: $GRAD_ACCUM"
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
-    --nproc_per_node=4 \
-    --master_port=29503 \
-    TRAIN_Regression.py \
-    --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset3" \
-    --epochs 50 \
-    --batch_size 32 \
-    --grad_accum 2 \
-    --lr 1e-4 \
-    --min_lr 1e-6 \
-    --image_resize_height 360 \
-    --image_resize_width 640 \
-    --sensor_enabled \
-    --cache_root "/home/najo/NAS/VLA/dataset/cache/qwen_vl_features" \
-    --num_workers 4 \
-    --fusion_strategy "cross_attention" \
-    --sensor_enabled \
-    --finetune_vl none \
-    --val_split 0.05 \
-    --load_sensor_encoder_checkpoint "./checkpoints/sensor_clip_latest.pth" \
-    --load_robot_state_encoder_checkpoint "./checkpoints/robot_state_mae_best.pth" \
-    --vlm_reuse_count 1 \
-    --cache_root "/home/najo/NAS/VLA/dataset/cache/qwen_vl_features" \
-    --skip_dataset_stats
+# CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
+#     --nproc_per_node=4 \
+#     --master_port=29503 \
+#     TRAIN_Regression.py \
+#     --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset3" \
+#     --epochs 50 \
+#     --batch_size 32 \
+#     --grad_accum 2 \
+#     --lr 1e-4 \
+#     --min_lr 1e-6 \
+#     --image_resize_height 360 \
+#     --image_resize_width 640 \
+#     --sensor_enabled \
+#     --cache_root "/home/najo/NAS/VLA/dataset/cache/qwen_vl_features" \
+#     --num_workers 4 \
+#     --fusion_strategy "cross_attention" \
+#     --sensor_enabled \
+#     --finetune_vl none \
+#     --val_split 0.05 \
+#     --load_sensor_encoder_checkpoint "./checkpoints/sensor_clip_latest.pth" \
+#     --load_robot_state_encoder_checkpoint "./checkpoints/robot_state_mae_best.pth" \
+#     --vlm_reuse_count 1 \
+#     --cache_root "/home/najo/NAS/VLA/dataset/cache/qwen_vl_features" \
+#     --skip_dataset_stats
     # --resume $REG_CHECKPOINT
 
 # echo "=============== REGRESSION STAGE 1 COMPLETE ==============="
@@ -289,15 +304,17 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
 # =================================================================
 
 # --- 3.2 Flow Matching Training: Stage 1 (Cache Mode) ---
-echo ""
-echo "=============== 3.1 FLOW MATCHING TRAINING (STAGE 1: CACHE) ==============="
-echo "Epochs: $STAGE1_EPOCHS, Batch Size: $MAIN_BATCH_SIZE, Grad Accum: $GRAD_ACCUM"
-
-CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
-    --nproc_per_node=4 \
-    --master_port=29503 \
+# echo ""
+# echo "=============== 3.1 FLOW MATCHING TRAINING (STAGE 1: DeepSpeed ZeRO-2) ==============="
+# echo "Epochs: 50, Batch Size: 32, Grad Accum: 2"
+# echo "DeepSpeed: ZeRO-2 (optimizer + gradient partitioning)"
+# echo "Sensor Encoder: Lightweight (58M) - Conv 256 → 2048, Transformer 1024"
+# echo ""
+#
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --num_gpus=4 \
     TRAIN_FlowMatching.py \
-    --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset3" \
+    --deepspeed_config configs/deepspeed_zero2.json \
+    --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset2" "/home/najo/NAS/VLA/dataset/New_dataset3" "/home/najo/NAS/VLA/dataset/New_dataset4/Eye_trocar" \
     --epochs 50 \
     --batch_size 32 \
     --grad_accum 2 \
@@ -306,22 +323,39 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
     --image_resize_height 360 \
     --image_resize_width 640 \
     --sensor_enabled \
+    --sensor_hidden_dim 256 \
+    --sensor_transformer_dim 1024 \
     --num_workers 4 \
     --fusion_strategy "cross_attention" \
     --finetune_vl none \
     --val_split 0.05 \
-    --load_sensor_encoder_checkpoint "./checkpoints/sensor_clip_latest.pth" \
     --load_robot_state_encoder_checkpoint "./checkpoints/robot_state_mae_best.pth" \
+    --load_sensor_encoder_checkpoint "./checkpoints/sensor_clip_latest.pth" \
     --vlm_reuse_count 1 \
     --cache_root "/home/najo/NAS/VLA/dataset/cache/qwen_vl_features" \
     --skip_dataset_stats \
-    --resume "./checkpoints/flow_matching_latest.pt"
+    --use_cache
 
-echo "=============== FLOW MATCHING STAGE 1 COMPLETE ==============="
-echo ""
-
-torchrun --nproc_per_node=4 TRAIN_FlowMatching.py \
-    --mode train \
+#     # --resume "./checkpoints/latest"
+#
+# echo "=============== FLOW MATCHING STAGE 1 COMPLETE ==============="
+# echo ""
+#
+# echo ""
+# echo "=============== 3.2 FLOW MATCHING TRAINING (STAGE 2: Full Fine-tuning) ==============="
+# echo "Epochs: 10, Batch Size: 4, Grad Accum: 8"
+# echo "DeepSpeed: ZeRO-2 with Full Fine-tuning (ALL models trainable)"
+# echo ""
+# echo "📊 Sensor Encoder: Lightweight (58M)"
+# echo "   Conv: 1025 → 256 → 512 → 1024 → 2048"
+# echo "   Projection: 2048 → 1024"
+# echo "   Transformer: d_model=1024, 2 layers"
+# echo "   Full Model: 3.88B (VLM 3.75B + Action 70M + Sensor 58M + Robot 3M)"
+# echo ""
+#
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --num_gpus=4 \
+    TRAIN_FlowMatching.py \
+    --deepspeed_config configs/deepspeed_zero2.json \
     --dataset_paths /home/najo/NAS/VLA/dataset/New_dataset3 \
     --batch_size 4 \
     --grad_accum 8 \
@@ -330,38 +364,49 @@ torchrun --nproc_per_node=4 TRAIN_FlowMatching.py \
     --epochs 10 \
     --lr 1e-5 \
     --min_lr 1e-7 \
-    --finetune_vl lora \
+    --finetune_vl full \
     --sensor_enabled \
+    --sensor_hidden_dim 256 \
+    --sensor_transformer_dim 1024 \
     --vlm_reuse_count 5 \
     --fusion_strategy "cross_attention" \
-    --load_sensor_encoder_checkpoint "./checkpoints/sensor_clip_latest.pth" \
     --load_robot_state_encoder_checkpoint "./checkpoints/robot_state_mae_best.pth" \
     --num_workers 4 \
-    --skip_dataset_stats \
-    --resume "./checkpoints/flow_matching_latest.pt"
+    --skip_dataset_stats
+    # --resume "./checkpoints/flow_matching_latest"
+#
+# echo ""
+# echo "=============== 3.3 FLOW MATCHING TRAINING (STAGE 3: Continued Training) ==============="
+# echo "Epochs: 50, Batch Size: 32, Grad Accum: 2"
+# echo "DeepSpeed: ZeRO-2"
+# echo "Sensor Encoder: Lightweight (58M) - Conv 256 → 2048, Transformer 1024"
+# echo ""
+#
+# CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --num_gpus=4 \
+#     TRAIN_FlowMatching.py \
+#     --deepspeed_config configs/deepspeed_zero2.json \
+#     --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset3" \
+#     --epochs 50 \
+#     --batch_size 32 \
+#     --grad_accum 2 \
+#     --lr 1e-4 \
+#     --min_lr 1e-6 \
+#     --image_resize_height 360 \
+#     --image_resize_width 640 \
+#     --sensor_enabled \
+#     --sensor_hidden_dim 256 \
+#     --sensor_transformer_dim 1024 \
+#     --num_workers 4 \
+#     --finetune_vl full \
+#     --fusion_strategy "cross_attention" \
+#     --val_split 0.05 \
+#     --load_robot_state_encoder_checkpoint "./checkpoints/robot_state_mae_best.pth" \
+#     --vlm_reuse_count 1 \
+#     --skip_dataset_stats \
+#     --resume "./checkpoints/flow_matching_latest"
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
-    --nproc_per_node=4 \
-    --master_port=29503 \
-    TRAIN_FlowMatching.py \
-    --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset3" \
-    --epochs 50 \
-    --batch_size 32 \
-    --grad_accum 2 \
-    --lr 1e-4 \
-    --min_lr 1e-6 \
-    --image_resize_height 360 \
-    --image_resize_width 640 \
-    --sensor_enabled \
-    --num_workers 4 \
-    --fusion_strategy "cross_attention" \
-    --finetune_vl none \
-    --val_split 0.05 \
-    --load_sensor_encoder_checkpoint "./checkpoints/sensor_clip_latest.pth" \
-    --load_robot_state_encoder_checkpoint "./checkpoints/robot_state_mae_best.pth" \
-    --vlm_reuse_count 1 \
-    --skip_dataset_stats \
-    --resume "./checkpoints/flow_matching_latest.pt"
+# --use_cache
+# --cache_root "/home/najo/NAS/VLA/dataset/cache/qwen_vl_features" \
 
 # --- 3.2 Flow Matching Training: Stage 2 (Live Mode) ---
 # echo ""

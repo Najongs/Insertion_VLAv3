@@ -84,8 +84,17 @@ Respond with:
         else:
             self.instruction = instruction
 
-        self.sensor_path = self.data_dir / "sensor_data.npz"
+        # Find timestamped sensor file: sensor_data_YYYYMMDD_HHMMSS.npz
+        sensor_files = list(self.data_dir.glob("sensor_data_*.npz"))
+        if sensor_files:
+            # Use the first timestamped sensor file found
+            self.sensor_path = sensor_files[0]
+        else:
+            # Fallback to sensor_data.npz if no timestamped file exists
+            self.sensor_path = self.data_dir / "sensor_data.npz"
+
         self.sensor_npz = None
+        self.sensor_raw_data = None  # Will store raw alines and forces
         self._load_sensor_metadata()
 
         npz_path = self.data_dir / "robot_states.npz"
@@ -184,16 +193,38 @@ Respond with:
             return 0.0
 
     def _load_sensor_metadata(self):
+        """Load raw sensor data (alines + forces) from timestamped npz file."""
         try:
             with np.load(self.sensor_path) as npz:
-                self.sensor_timestamps = npz["timestamps"][:]
-                self.sensor_windows_shape = npz["data"].shape
-                self.sensor_length = self.sensor_windows_shape[0]
-                self.has_sensor = True
+                # Check if this is raw data (has 'alines' and 'forces') or preprocessed data (has 'data')
+                if 'alines' in npz and 'forces' in npz:
+                    # Raw sensor data format
+                    self.sensor_timestamps = npz["timestamps"][:]
+                    alines = npz["alines"]  # Shape: (N, 1025)
+                    forces = npz["forces"]  # Shape: (N,)
+
+                    # Store shapes for reference
+                    self.sensor_length = len(self.sensor_timestamps)
+                    self.alines_shape = alines.shape
+                    self.forces_shape = forces.shape
+                    self.has_sensor = True
+
+                    # Don't load all data into memory yet - will be loaded on-demand
+                    # Just store the file path for lazy loading
+
+                elif 'data' in npz:
+                    # Fallback: preprocessed window data
+                    print(f"⚠️ Using preprocessed sensor data (not raw). Consider regenerating.")
+                    self.sensor_timestamps = npz["timestamps"][:]
+                    self.sensor_windows_shape = npz["data"].shape
+                    self.sensor_length = self.sensor_windows_shape[0]
+                    self.has_sensor = True
+                else:
+                    raise ValueError(f"Unknown sensor data format in {self.sensor_path}")
+
         except FileNotFoundError:
             print(f"⚠️ Sensor file not found: {self.sensor_path}")
             self.sensor_timestamps = np.array([])
-            self.sensor_windows_shape = (0, 0, 0)
             self.sensor_length = 0
             self.has_sensor = False
         except Exception as e:
@@ -247,6 +278,12 @@ Respond with:
         }
 
     def _get_sensor_window_new(self, idx: int):
+        """
+        Extract sensor window from raw data and combine alines + forces.
+
+        Returns:
+            np.ndarray: Shape (sensor_window_size, 1026) where 1026 = 1025 (alines) + 1 (forces)
+        """
         if not self.has_sensor:
             return np.zeros((self.sensor_window_size, 1026), dtype=np.float32)
 
@@ -254,14 +291,53 @@ Respond with:
         if s_npz is None or self.sensor_length == 0:
             return np.zeros((self.sensor_window_size, 1026), dtype=np.float32)
 
-        sensor_idx = min(idx, self.sensor_length - 1)
-        sensor_window = np.array(s_npz["data"][sensor_idx], dtype=np.float32)
+        # Check if using raw data or preprocessed data
+        if 'alines' in s_npz and 'forces' in s_npz:
+            # Raw sensor data: extract window and combine alines + forces
 
-        if sensor_window.shape[0] < self.sensor_window_size:
-            pad = np.zeros((self.sensor_window_size - sensor_window.shape[0], sensor_window.shape[1]), dtype=np.float32)
-            sensor_window = np.concatenate([sensor_window, pad], axis=0)
+            # Calculate sensor index corresponding to robot action index
+            # robot_idx = idx * action_interval (robot states at 100Hz)
+            # sensor samples at 650Hz, so sensor_idx ≈ robot_idx * (sensor_hz / robot_hz)
+            robot_center_idx = idx * self.action_interval
+            sensor_ratio = self.sensor_hz / self.robot_hz  # ~6.5
+            sensor_center_idx = int(robot_center_idx * sensor_ratio)
 
-        return sensor_window
+            # Extract window centered around sensor_center_idx
+            sensor_start = max(0, sensor_center_idx - self.sensor_window_size // 2)
+            sensor_end = sensor_start + self.sensor_window_size
+
+            # Ensure we don't exceed data bounds
+            sensor_end = min(sensor_end, self.sensor_length)
+            sensor_start = max(0, sensor_end - self.sensor_window_size)
+
+            # Load data slice
+            alines_window = np.array(s_npz["alines"][sensor_start:sensor_end], dtype=np.float32)  # (N, 1025)
+            forces_window = np.array(s_npz["forces"][sensor_start:sensor_end], dtype=np.float32)  # (N,)
+
+            # Combine: alines (1025) + forces (1) = 1026 dimensions
+            forces_expanded = forces_window[:, np.newaxis]  # (N, 1)
+            sensor_window = np.concatenate([alines_window, forces_expanded], axis=1)  # (N, 1026)
+
+            # Pad if necessary
+            if sensor_window.shape[0] < self.sensor_window_size:
+                pad = np.zeros((self.sensor_window_size - sensor_window.shape[0], 1026), dtype=np.float32)
+                sensor_window = np.concatenate([sensor_window, pad], axis=0)
+
+            return sensor_window
+
+        elif 'data' in s_npz:
+            # Fallback: preprocessed window data
+            sensor_idx = min(idx, self.sensor_length - 1)
+            sensor_window = np.array(s_npz["data"][sensor_idx], dtype=np.float32)
+
+            if sensor_window.shape[0] < self.sensor_window_size:
+                pad = np.zeros((self.sensor_window_size - sensor_window.shape[0], sensor_window.shape[1]), dtype=np.float32)
+                sensor_window = np.concatenate([sensor_window, pad], axis=0)
+
+            return sensor_window
+
+        else:
+            return np.zeros((self.sensor_window_size, 1026), dtype=np.float32)
 
     def _get_robot_state_window_new(self, idx: int):
         if not self.has_robot_states:

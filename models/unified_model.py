@@ -120,8 +120,9 @@ class QwenVLAUnified(nn.Module):
         sensor_encoder_type: Literal['default', 'force_aware'] = 'force_aware', # 기본값을 force_aware로 변경
         sensor_input_channels=1026,
         sensor_temporal_length=65, # 비동기 데이터셋 기준 65
-        sensor_hidden_dim=512,
+        sensor_hidden_dim=512,  # Conv backbone 초기 채널 (512=heavy 4096, 256=light 2048)
         sensor_output_dim=1024, # 학습 스크립트에 명시된 값
+        sensor_transformer_dim=None,  # Transformer 차원 축소 (None=auto from conv, 1024=medium)
         # 로봇 상태 인코더 매개변수
         robot_state_enabled=True,
         robot_state_temporal_length=100,
@@ -230,20 +231,45 @@ class QwenVLAUnified(nn.Module):
             vl_hidden_size = 2048  # Qwen2.5-VL-3B 기본 hidden_size
 
         if sensor_enabled:
+            # Conv backbone 최종 채널 계산: hidden_dim * (2 ** 3) = hidden_dim * 8
+            conv_final_channels = sensor_hidden_dim * 8
+
             if sensor_encoder_type == 'force_aware':
                 print("   센서 인코더 타입: Force-Aware")
+                print(f"   📊 Conv backbone: {sensor_input_channels-1}ch → ... → {conv_final_channels}ch (hidden_dim={sensor_hidden_dim})")
+
+                if sensor_transformer_dim is not None:
+                    print(f"   🔧 Mode: Conv({conv_final_channels}) → Projection({sensor_transformer_dim}) → Transformer({sensor_transformer_dim})")
+                    mode_name = "Lightweight" if sensor_hidden_dim < 512 else "Medium"
+                    print(f"   💡 {mode_name} mode")
+                else:
+                    print(f"   🔧 Mode: Conv({conv_final_channels}) → Transformer({conv_final_channels})")
+                    print(f"   💡 Heavy mode")
+
                 self.sensor_encoder = ForceAwareSensorEncoder(
                     dist_channels=sensor_input_channels - 1, force_channels=1,
                     temporal_length=sensor_temporal_length, dist_hidden_dim=sensor_hidden_dim,
                     force_hidden_dim=128, output_dim=sensor_output_dim,
-                    use_transformer=True, num_transformer_layers=2
+                    use_transformer=True, num_transformer_layers=2,
+                    transformer_dim=sensor_transformer_dim  # 경량화 옵션
                 ).to(dtype=torch.bfloat16, device="cuda")
             else:
                 print("   센서 인코더 타입: 기본값")
+                print(f"   📊 Conv backbone: {sensor_input_channels}ch → ... → {conv_final_channels}ch (hidden_dim={sensor_hidden_dim})")
+
+                if sensor_transformer_dim is not None:
+                    print(f"   🔧 Mode: Conv({conv_final_channels}) → Projection({sensor_transformer_dim}) → Transformer({sensor_transformer_dim})")
+                    mode_name = "Lightweight" if sensor_hidden_dim < 512 else "Medium"
+                    print(f"   💡 {mode_name} mode")
+                else:
+                    print(f"   🔧 Mode: Conv({conv_final_channels}) → Transformer({conv_final_channels})")
+                    print(f"   💡 Heavy mode")
+
                 self.sensor_encoder = SensorEncoder(
                     input_channels=sensor_input_channels, temporal_length=sensor_temporal_length,
                     hidden_dim=sensor_hidden_dim, output_dim=sensor_output_dim,
-                    use_transformer=True, num_transformer_layers=2
+                    use_transformer=True, num_transformer_layers=2,
+                    transformer_dim=sensor_transformer_dim  # 경량화 옵션
                 ).to(dtype=torch.bfloat16, device="cuda")
             force_bn_fp32_(self.sensor_encoder)
         else:

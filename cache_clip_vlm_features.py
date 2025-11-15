@@ -15,56 +15,54 @@ Usage:
 """
 
 # =============================================================================
-# ⚠️ CRITICAL: CLIP VLM 캐시 구조 및 prompt_hash 매칭 (2025-01-12)
+# ⚠️ CRITICAL: CLIP VLM 캐시 구조 및 prompt_hash 매칭 (Updated 2025-01-13)
 # =============================================================================
 # 이 스크립트는 CLIP 학습용 VLM 캐시를 생성합니다.
 # 캐시 구조를 올바르게 이해하는 것이 매우 중요합니다.
 #
-# 1. CLIP VLM 캐시 경로 구조:
+# 1. CLIP VLM 캐시 경로 구조 (2025-01-13 업데이트):
 #    {cache_root}/clip_vlm_features/{prompt_hash}/{episode_name}_vlm{idx}.pt
 #
-#    - prompt_hash: CLIP_PROMPT_TEXT (TRAIN_SensorImage_CLIP.py에서 import)를
-#                   MD5 해시화한 값 (첫 8자)
-#    - CLIP_PROMPT_TEXT는 고정된 텍스트 (태스크 이름 포함 X)
-#    - 모든 태스크(Red/Blue/Green/White/Yellow point)가 동일한 prompt 사용
-#    - 따라서 모든 태스크의 캐시가 하나의 prompt_hash 디렉토리에 저장됨
+#    - prompt_hash: CLIP_PROMPT_TEXT를 task_name으로 포맷한 후 MD5 해시화한 값 (첫 8자)
+#    - CLIP_PROMPT_TEXT는 템플릿 문자열이며 {task_name} 플레이스홀더를 포함
+#    - 각 태스크(Red_point, White_point, etc.)가 고유한 prompt_hash를 가짐
+#    - 각 태스크의 캐시가 별도의 prompt_hash 디렉토리에 저장됨
 #
-# 2. Flow Matching VL 캐시와의 핵심 차이점:
+# 2. 2025-01-13 주요 변경사항:
+#    ✨ CLIP도 이제 task-specific prompts 사용:
+#       - CLIP_PROMPT_TEXT 템플릿: "...target point is {task_name}..."
+#       - Red_point  → "...target point is Red_point..."  → hash_red
+#       - White_point → "...target point is White_point..." → hash_white
+#       - 캐시 구조: /cache/clip_vlm_features/hash_red/, /cache/clip_vlm_features/hash_white/
+#
+#    🖼️ Single-view support:
+#       - VLM에 View5 카메라 뷰의 이미지만 전달
+#       - Content structure: [{"type": "image", "image": img}, {"type": "text", "text": prompt}]
+#
+# 3. Flow Matching VL 캐시와의 차이점:
 #
 #    ┌─────────────────┬──────────────────────────┬─────────────────────────────┐
 #    │                 │  CLIP VLM 캐시           │  Flow Matching VL 캐시      │
 #    ├─────────────────┼──────────────────────────┼─────────────────────────────┤
-#    │ Prompt 소스     │ 고정된 CLIP_PROMPT_TEXT  │ 태스크별 instruction        │
+#    │ Prompt 소스     │ CLIP_PROMPT_TEXT template│ 태스크별 instruction        │
 #    │ 해시 알고리즘   │ MD5                      │ SHA256                      │
-#    │ task_name 포함  │ X (모든 태스크 동일)     │ O (태스크별로 다름)         │
+#    │ task_name 포함  │ O (태스크별로 다름)      │ O (태스크별로 다름)         │
 #    │ 캐시 디렉토리   │ clip_vlm_features/       │ qwen_vl_features/           │
-#    │ prompt_hash 수  │ 1개 (모든 태스크 공유)   │ 5개 (태스크당 1개)          │
+#    │ prompt_hash 수  │ N개 (태스크당 1개)       │ N개 (태스크당 1개)          │
+#    │ 이미지 입력     │ Single view (View5)      │ Single view                 │
 #    └─────────────────┴──────────────────────────┴─────────────────────────────┘
 #
-#    예시:
-#      - CLIP: 모든 태스크 → 동일 prompt → 1개 hash (예: a1b2c3d4)
-#              캐시: /cache/clip_vlm_features/a1b2c3d4/
-#
-#      - Flow Matching:
-#              Red_point   → "...target is the Red point..."   → hash1
-#              Blue_point  → "...target is the Blue point..."  → hash2
-#              캐시: /cache/qwen_vl_features/hash1/, /cache/qwen_vl_features/hash2/, ...
-#
-# 3. ⚠️ 캐시 무효화 주의사항:
-#    - CLIP_PROMPT_TEXT를 변경하면 prompt_hash가 바뀌어 기존 캐시를 찾을 수 없음
-#    - CLIP_PROMPT_TEXT 변경 시 반드시 캐시를 재생성해야 함
+# 4. ⚠️ 캐시 무효화 주의사항:
+#    - CLIP_PROMPT_TEXT 템플릿을 변경하면 모든 prompt_hash가 바뀌어 기존 캐시를 찾을 수 없음
+#    - CLIP_PROMPT_TEXT 변경 시 반드시 모든 태스크의 캐시를 재생성해야 함
 #    - 학습 시 TRAIN_SensorImage_CLIP.py의 CLIP_PROMPT_TEXT와 완전히 일치해야 함
 #
-# 4. 캐시 생성과 학습 간 일관성:
+# 5. 캐시 생성과 학습 간 일관성:
 #    ✅ 반드시 확인해야 할 사항:
-#       - 동일한 CLIP_PROMPT_TEXT 사용 (TRAIN_SensorImage_CLIP.py에서 import)
+#       - 동일한 CLIP_PROMPT_TEXT 템플릿 사용 (TRAIN_SensorImage_CLIP.py에서 import)
 #       - 동일한 cache_root 경로
 #       - 동일한 VLM 모델 (Qwen2.5-VL-3B-Instruct 등)
-#
-# 5. 2025-01-12 캐시 문제 해결 교훈:
-#    - Flow Matching VL 캐시가 태스크별로 분리된 이유를 이해
-#    - CLIP은 모든 태스크에 동일한 prompt를 사용하여 통합 캐시 생성
-#    - 이 차이점을 인지하지 못하면 캐시를 찾지 못하는 문제 발생 가능
+#       - 동일한 hand-eye view 설정 (View5 only)
 # =============================================================================
 
 import os
@@ -91,6 +89,8 @@ from TRAIN_SensorImage_CLIP import (
     SensorImageCLIPDataset,
     CLIP_PROMPT_TEXT,
     get_clip_prompt_hash,
+    get_formatted_clip_prompt,
+    extract_task_name_from_episode_path,
 )
 from qwen_vl_utils import process_vision_info
 from vla_cache_manager import VLACacheManager
@@ -137,36 +137,37 @@ def cleanup_distributed():
         dist.destroy_process_group()
 
 
-def generate_text_response(
-    vlm_model,
-    vlm_processor,
-    generation_text_input,
-    vision_input,
-    max_new_tokens,
-):
-    """Generate the VLM's textual response for the given prompt/image pair."""
+def generate_text_response(vlm_model, vlm_processor, messages, max_new_tokens):
+    # messages: [{"role":"user","content":[{"type":"image","image": raw_image}, {"type":"text","text": prompt}]}]
+    text_input = vlm_processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    image_inputs, video_inputs = process_vision_info(messages)
+
     model_inputs = vlm_processor(
-        text=[generation_text_input],
-        images=[vision_input],
+        text=[text_input],
+        images=image_inputs,
+        videos=video_inputs,
         padding=True,
-        return_tensors="pt",
+        return_tensors="pt"
     ).to(device=vlm_model.device, dtype=vlm_model.dtype)
 
-    input_lengths = [len(ids) for ids in model_inputs.input_ids]
+    input_lens = [len(ids) for ids in model_inputs.input_ids]
     with torch.no_grad():
-        generated_ids = vlm_model.generate(
+        gen_ids = vlm_model.generate(
             **model_inputs,
             max_new_tokens=max_new_tokens,
             do_sample=False,
             num_beams=1,
         )
-    trimmed = [ids[len:] for ids, len in zip(generated_ids, input_lengths)]
-    response = vlm_processor.batch_decode(trimmed, skip_special_tokens=True)[0]
-    if "<|im_start|>assistant" in response:
-        response = response.split("<|im_start|>assistant", 1)[-1]
-    if "<|im_end|>" in response:
-        response = response.split("<|im_end|>", 1)[0]
-    return response.strip()
+
+    trimmed = [ids[il:] for ids, il in zip(gen_ids, input_lens)]
+    resp = vlm_processor.batch_decode(trimmed, skip_special_tokens=True)[0]
+    # Qwen 템플릿 구간 제거
+    if "<|im_start|>assistant" in resp:
+        resp = resp.split("<|im_start|>assistant", 1)[-1]
+    if "<|im_end|>" in resp:
+        resp = resp.split("<|im_end|>", 1)[0]
+    return resp.strip()
+
 
 
 def cache_worker(rank, world_size, local_rank, args, clip_dataset):
@@ -179,19 +180,35 @@ def cache_worker(rank, world_size, local_rank, args, clip_dataset):
 
     # Each worker gets its own cache manager instance
     cache_manager = VLACacheManager(cache_dir=str(Path(args.cache_root) / "clip_vlm_features"))
-    prompt_hash = get_clip_prompt_hash()
+
+    # Build episode_id -> task_name mapping from unified_dataset
+    episode_to_task = {}
+    for sub_dataset in clip_dataset.unified_dataset.datasets:
+        episode_id = sub_dataset.data_dir.name
+        task_name = extract_task_name_from_episode_path(sub_dataset.data_dir)
+        episode_to_task[episode_id] = task_name
+
+    if is_main_process:
+        print(f"[Rank {rank}] Built task name mapping for {len(episode_to_task)} episodes")
+        unique_tasks = set(episode_to_task.values())
+        print(f"[Rank {rank}] Found {len(unique_tasks)} unique tasks: {sorted(unique_tasks)}")
 
     # 1. Load VLM (one per process)
     if is_main_process:
         print(f"[Rank {rank}] Loading VLM on GPU {local_rank}...")
 
-    vlm_processor = AutoProcessor.from_pretrained(args.vlm_model, trust_remote_code=True)
+    vlm_processor = AutoProcessor.from_pretrained(
+        args.vlm_model,
+        trust_remote_code=True,
+        local_files_only=True  # Use local cache only, avoid network verification
+    )
     vlm_model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
         args.vlm_model,
         trust_remote_code=True,
         torch_dtype=torch.bfloat16,
         device_map={"": device},  # Load entire model on this specific GPU
-        attn_implementation="flash_attention_2"
+        attn_implementation="flash_attention_2",
+        local_files_only=True  # Use local cache only, avoid network verification
     )
     vlm_model.eval()
     disable_generation_temperature(vlm_model)
@@ -227,42 +244,47 @@ def cache_worker(rank, world_size, local_rank, args, clip_dataset):
     for batch in dataloader:
         # Process each sample in the batch
         for sample in batch:
-            image = sample["hand_eye_image"]
+            images = sample["hand_eye_image"]  # Now a list of images (View5, View4, etc.)
             episode_id = sample["episode_id"]
             vlm_idx = sample["vlm_idx"]
 
             if vlm_idx is None:
                 continue
 
-            if cache_manager.cache_exists(dataset_name=episode_id, vlm_idx=vlm_idx, prompt_hash=prompt_hash):
+            # Get task-specific prompt and hash
+            task_name = episode_to_task.get(episode_id, "Unknown")
+            formatted_prompt = get_formatted_clip_prompt(task_name)
+            task_prompt_hash = get_clip_prompt_hash(task_name)
+
+            if cache_manager.cache_exists(dataset_name=episode_id, vlm_idx=vlm_idx, prompt_hash=task_prompt_hash):
                 continue
 
             # Generate text, image embeds, and text embeds
             try:
-                messages = [{"role": "user", "content": [{"type": "image", "image": image}, {"type": "text", "text": CLIP_PROMPT_TEXT}]}]
-                generation_text_input = vlm_processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-                vision_input, _ = process_vision_info(messages)
-
+                # Use only the first image (View5)
+                image = images[0] if isinstance(images, list) and len(images) > 0 else images
+                messages = [{"role": "user", "content": [{"type": "image", "image": image}, {"type": "text", "text": formatted_prompt}]}]
                 text_response = generate_text_response(
-                    vlm_model, vlm_processor, generation_text_input, vision_input, args.max_new_tokens
+                    vlm_model, vlm_processor, messages, args.max_new_tokens
                 )
 
                 with torch.no_grad():
                     # 1. 이미지 전용 추론 (순수 이미지 특징 추출 - 모든 이미지 토큰)
-                    image_only_messages = [{"role": "user", "content": [{"type": "image", "image": vision_input}, {"type": "text", "text": ""}]}]
+                    image_only_messages = [{"role": "user", "content": [{"type": "image", "image": image}, {"type": "text", "text": ""}]}]
                     image_text_with_placeholders = vlm_processor.apply_chat_template(
                         image_only_messages, tokenize=False, add_generation_prompt=False
                     )
+                    image_only_vision_input, _ = process_vision_info(image_only_messages)
                     image_inputs = vlm_processor(
                         text=[image_text_with_placeholders],
-                        images=[vision_input], padding=True, return_tensors="pt"
+                        images=image_only_vision_input, padding=True, return_tensors="pt"
                     ).to(device=vlm_model.device, dtype=vlm_model.dtype)
 
                     image_outputs = vlm_model(**image_inputs, output_hidden_states=True, return_dict=True)
                     image_hidden_state = image_outputs.hidden_states[-1]
 
-                    # 이미지 토큰만 추출 (토큰 ID 151857)
-                    image_token_mask = (image_inputs['input_ids'] == 151857)
+                    # 이미지 토큰만 추출 (토큰 ID 151655 for Qwen2.5-VL image_pad)
+                    image_token_mask = (image_inputs['input_ids'] == 151655)
                     image_indices = torch.where(image_token_mask.squeeze(0))[0]
                     image_features = image_hidden_state[:, image_indices, :]
 
@@ -275,14 +297,14 @@ def cache_worker(rank, world_size, local_rank, args, clip_dataset):
                     text_hidden_state = text_outputs.hidden_states[-1]
                     guidance_vector = text_hidden_state.mean(dim=1)
 
-                # 3. 캐시 저장 (튜플 형식으로)
+                # 3. 캐시 저장 (튜플 형식으로, task-specific prompt hash 사용)
                 features_to_cache = (
                     image_features.detach().to("cpu", dtype=torch.float16),
                     guidance_vector.detach().to("cpu", dtype=torch.float16)
                 )
 
                 cache_manager.save_cache_tuple(
-                    dataset_name=episode_id, vlm_idx=vlm_idx, prompt_hash=prompt_hash, features_tuple=features_to_cache
+                    dataset_name=episode_id, vlm_idx=vlm_idx, prompt_hash=task_prompt_hash, features_tuple=features_to_cache
                 )
 
             except Exception as e:
@@ -310,6 +332,8 @@ def main():
     parser.add_argument('--cache_root', type=str, default="/home/najo/NAS/VLA/dataset/cache",
                        help='Root directory for all caches.')
     parser.add_argument('--max_new_tokens', type=int, default=256)
+    parser.add_argument('--skip_dataset_stats', action='store_true',
+                       help='Skip dataset statistics collection for faster startup')
 
     args = parser.parse_args()
 
@@ -333,6 +357,7 @@ def main():
             old_dataset_patterns=args.old_dataset_patterns,
             return_dataset=True,
             use_cache=False,
+            skip_dataset_stats=args.skip_dataset_stats,
         )
 
         # This dataset filters for the last 20% of samples etc.
@@ -351,6 +376,7 @@ def main():
             old_dataset_patterns=args.old_dataset_patterns,
             return_dataset=True,
             use_cache=False,
+            skip_dataset_stats=args.skip_dataset_stats,
         )
         clip_dataset = SensorImageCLIPDataset(
             unified_dataset,

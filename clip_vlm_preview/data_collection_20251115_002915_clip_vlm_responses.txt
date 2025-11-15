@@ -1,0 +1,138 @@
+CLIP VLM Response Preview
+================================================================================
+
+Episode: data_collection_20251115_002915
+Task Name: Eye_trocar
+VLM Model: Qwen/Qwen2.5-VL-3B-Instruct
+Prompt Hash: 22bf883e
+Hand-eye Views: View4, View5
+Total Episode Images: 114
+80% Threshold Index: 22
+Last 20% Images: 92
+Samples Previewed: 10
+
+Instruction:
+This view is from the robot's end-tool camera, focusing on the needle attached to a 3D-printed tool. I need to confirm what object the needle tip is approaching and whether it has been inserted. Please provide a concise explanation of the needle's current situation and, given it's in an approaching state, describe how close the needle tip might be to the target. The setup is on an optical table, so threaded holes are visible, but it is not piercing these; they are the floor surface far away from the needle. The target task is an insertion, and the target point is Eye_trocar. The fact that the target is not visible implies the robot is currently moving toward it. The insertion isn't always in the exact center of the target.
+
+================================================================================
+Global Sample #22 (Last 20% idx: 0, VLM idx: 22)
+================================================================================
+
+View: View4
+Image: View4/ZED_49045152_left_1763134161.531.jpg
+View: View5
+Image: View5/OAK_1763134161.531.jpg
+
+VLM Response:
+The needle tip appears to be approaching the target point labeled "Eye_trocar." Given the current position of the robot and the orientation of the needle, it seems the needle tip is likely within a few millimeters of the target. However, without a precise measurement, it cannot be confirmed if the needle tip is exactly at the center or slightly off-center. The robot's movement suggests it is actively trying to align the needle with the target, which may involve some fine-tuning once it reaches the general vicinity.
+
+================================================================================
+Global Sample #31 (Last 20% idx: 9, VLM idx: 31)
+================================================================================
+
+View: View4
+Image: View4/ZED_49045152_left_1763134163.782.jpg
+View: View5
+Image: View5/OAK_1763134163.777.jpg
+
+VLM Response:
+The needle tip appears to be approaching the 3D-printed tool with colored dots, which likely represents the target area for the insertion. Given the setup, the needle tip is positioned very close to the target point, possibly within millimeters or centimeters. The exact distance cannot be determined without more precise measurements, but it is clear that the needle is moving towards the target with precision. The robot's end-tool camera provides a clear view of the needle's approach, ensuring accurate control during the insertion process.
+
+================================================================================
+Global Sample #40 (Last 20% idx: 18, VLM idx: 40)
+================================================================================
+
+View: View4
+Image: View4/ZED_49045152_left_1763134166.032.jpg
+View: View5
+Image: View5/OAK_1763134166.030.jpg
+
+VLM Response:
+The needle tip appears to be approaching the 3D-printed tool, which is likely the target for the insertion. Given the current position of the robot and the fact that the target (Eye_trocar) is not visible, the needle tip is likely approaching the target but not yet in contact with it. The distance between the needle tip and the target is not precisely known, but it seems to be within a few millimeters or centimeters, depending on the precision required for the insertion task. The robot's movement is controlled to ensure the needle tip is positioned accurately around the target area.
+
+================================================================================
+Global Sample #49 (Last 20% idx: 27, VLM idx: 49)
+================================================================================
+
+View: View4
+Image: View4/ZED_49045152_left_1763134168.282.jpg
+View: View5
+Image: View5/OAK_1763134168.279.jpg
+
+VLM Response:
+The needle tip appears to be approaching the target point labeled "Eye_trocar." Given the current position of the robot and the orientation of the needle, it seems the needle tip is likely within a few millimeters of the target. However, without a precise measurement, it cannot be confirmed if the needle tip is exactly at the center or slightly off-center. The robot's movement suggests it is actively trying to align the needle with the target, but due to the complexity of the task and the precision required, there may be some uncertainty in the final positioning.
+
+================================================================================
+Global Sample #58 (Last 20% idx: 36, VLM idx: 58)
+================================================================================
+
+View: View4
+Image: View4/ZED_49045152_left_1763134170.534.jpg
+View: View5
+Image: View5/OAK_1763134170.527.jpg
+
+VLM Response:
+The needle tip appears to be approaching the 3D-printed tool, which is likely the target for the insertion. Given the current position of the needle, it seems to be at a distance of approximately 1-2 centimeters from the target. This distance is consistent with the typical range of motion for robotic arms when performing precise tasks like inserting needles into targets. The exact position can vary slightly depending on the specific design of the 3D-printed tool and the precision required for the task.
+
+================================================================================
+Global Sample #68 (Last 20% idx: 46, VLM idx: 68)
+================================================================================
+
+View: View4
+Image: View4/ZED_49045152_left_1763134173.033.jpg
+View: View5
+Image: View5/OAK_1763134173.027.jpg
+
+VLM Response:
+The needle tip appears to be approaching the 3D-printed tool with colored dots, which likely represents the target area for the insertion. Given the setup, the needle tip is positioned very close to the target point, possibly within millimeters or centimeters. The exact distance cannot be determined without more precise measurements, but it is clear that the needle is moving towards the target with precision. The robot's end-tool camera provides a clear view of the needle's approach, ensuring accurate control during the insertion process.
+
+================================================================================
+Global Sample #77 (Last 20% idx: 55, VLM idx: 77)
+================================================================================
+
+View: View4
+Image: View4/ZED_49045152_left_1763134175.285.jpg
+View: View5
+Image: View5/OAK_1763134175.277.jpg
+
+VLM Response:
+The needle tip appears to be approaching the 3D-printed tool, which is likely the target for the insertion. Given the setup, the needle tip is positioned very close to the target, possibly within millimeters or centimeters. The exact distance cannot be determined without more precise measurements, but it is clear that the needle is moving towards the target with precision. The robot's end-tool camera provides a clear view of the needle's approach, ensuring that the insertion will be accurate.
+
+================================================================================
+Global Sample #86 (Last 20% idx: 64, VLM idx: 86)
+================================================================================
+
+View: View4
+Image: View4/ZED_49045152_left_1763134177.530.jpg
+View: View5
+Image: View5/OAK_1763134177.530.jpg
+
+VLM Response:
+The needle tip appears to be approaching the 3D-printed tool, which is likely the target for the insertion. Given the current position of the robot and the fact that the target (Eye_trocar) is not visible, the needle tip is likely approaching the target but not yet in contact with it. The distance between the needle tip and the target is not precisely known, but it seems to be within a few millimeters of the target point. The robot is currently moving towards the target, and the insertion may not be perfectly centered due to the nature of the task.
+
+================================================================================
+Global Sample #95 (Last 20% idx: 73, VLM idx: 95)
+================================================================================
+
+View: View4
+Image: View4/ZED_49045152_left_1763134179.791.jpg
+View: View5
+Image: View5/OAK_1763134179.779.jpg
+
+VLM Response:
+The needle tip appears to be approaching the target point labeled "Eye_trocar." Given the current position of the robot and the orientation of the needle, it seems the needle tip is likely within a few millimeters of the target. However, without precise measurements or additional context, it cannot be definitively stated how close the needle tip is to the target. The robot's movement suggests it is actively trying to align the needle with the target, but due to the complexity of the task and the potential for slight misalignment, the exact distance cannot be determined solely from this image.
+
+================================================================================
+Global Sample #104 (Last 20% idx: 82, VLM idx: 104)
+================================================================================
+
+View: View4
+Image: View4/ZED_49045152_left_1763134182.282.jpg
+View: View5
+Image: View5/OAK_1763134182.027.jpg
+
+VLM Response:
+The needle tip appears to be approaching the 3D-printed tool, which is likely the target for the insertion. Given the current position and the fact that the target is not visible, the needle tip is likely approaching the target point, which is the Eye_trocar. 
+
+Based on the image, the needle tip is positioned such that it is about to make contact with the 3D-printed tool. The exact distance between the needle tip and the target point (Eye_trocar) cannot be determined precisely without additional information, but it is reasonable to assume that the needle tip is within a few millimeters of the target point. The precise distance would depend on the specific design of the 3D-printed tool and the orientation of the needle relative to the target.
+

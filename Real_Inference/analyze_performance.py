@@ -3,7 +3,7 @@
 Quick Performance Analysis Script
 
 Usage:
-    python analyze_performance.py ../async_inference_20251105_003453/performance_timings_20251105_003453.jsonl
+    python Real_Inference/analyze_performance.py ./Real_Inference/async_inference_20251112_160832/performance_timings_20251112_160832.jsonl
 """
 
 import json

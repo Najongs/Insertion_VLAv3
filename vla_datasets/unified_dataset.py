@@ -580,7 +580,7 @@ def create_unified_dataloader(
     # Load old format datasets
     if old_dataset_patterns:
         for pattern in old_dataset_patterns:
-            expanded_paths = glob.glob(pattern)
+            expanded_paths = sorted(glob.glob(pattern))
             for traj_dir in expanded_paths:
                 try:
                     ds = UnifiedVLADataset(
@@ -612,7 +612,7 @@ def create_unified_dataloader(
         for raw_entry in new_paths_to_process:
             entry_str = str(raw_entry)
             if _has_wildcard_pattern(entry_str):
-                matched = glob.glob(entry_str)
+                matched = sorted(glob.glob(entry_str))
                 if matched:
                     if rank == 0 and not skip_dataset_stats:
                         print(f"   - Pattern '{entry_str}' expanded to {len(matched)} paths.")
@@ -632,7 +632,7 @@ def create_unified_dataloader(
             path_weight = weight_map.get(str(new_path))
 
             # Determine if new_path is a root of tasks or a single task directory
-            subdirs = [d for d in new_path.iterdir() if d.is_dir()]
+            subdirs = sorted([d for d in new_path.iterdir() if d.is_dir()])
             is_task_dir = any(d.name.startswith('episode_') or d.name.startswith('data_collection_') for d in subdirs)
 
             if is_task_dir:
@@ -643,7 +643,7 @@ def create_unified_dataloader(
                 task_list = subdirs
 
             for task_dir in task_list:
-                for episode_dir in task_dir.iterdir():
+                for episode_dir in sorted(task_dir.iterdir()):
                     if not episode_dir.is_dir() or not (episode_dir.name.startswith('episode_') or episode_dir.name.startswith('data_collection_')):
                         continue
 

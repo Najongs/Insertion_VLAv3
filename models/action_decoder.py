@@ -17,7 +17,50 @@ import torch.nn.functional as F
 # ==============================================================================
 # 1. 헬퍼 함수 및 클래스
 # ==============================================================================
+class AdaLayerNorm(nn.Module):
+    def __init__(self, hidden_dim: int):
+        super().__init__()
+        self.ln = nn.LayerNorm(hidden_dim)
+        self.mod = nn.Sequential(
+            nn.SiLU(),
+            nn.Linear(hidden_dim, 2 * hidden_dim)
+        )
+    def forward(self, x: torch.Tensor, cond: torch.Tensor):
+        scale, shift = self.mod(cond).chunk(2, dim=-1)
+        x = self.ln(x)
+        return x * (1 + scale.unsqueeze(1)) + shift.unsqueeze(1)
 
+class ModulatedDecoderLayer(nn.Module):
+    def __init__(self, hidden_dim: int, nhead: int, dropout: float, ffn_mult: int = 4):
+        super().__init__()
+        self.self_ln = AdaLayerNorm(hidden_dim)
+        self.cross_ln = AdaLayerNorm(hidden_dim)
+        self.ffn_ln = AdaLayerNorm(hidden_dim)
+
+        self.self_attn = nn.MultiheadAttention(hidden_dim, nhead, dropout=dropout, batch_first=True)
+        self.cross_attn = nn.MultiheadAttention(hidden_dim, nhead, dropout=dropout, batch_first=True)
+
+        self.ffn = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim * ffn_mult),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim * ffn_mult, hidden_dim),
+        )
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, tgt, memory, cond, tgt_mask=None, memory_key_padding_mask=None):
+        x = self.self_ln(tgt, cond)
+        sa, _ = self.self_attn(x, x, x, attn_mask=tgt_mask, need_weights=False)
+        tgt = tgt + self.dropout(sa)
+
+        x = self.cross_ln(tgt, cond)
+        ca, _ = self.cross_attn(x, memory, memory, key_padding_mask=memory_key_padding_mask, need_weights=False)
+        tgt = tgt + self.dropout(ca)
+
+        x = self.ffn_ln(tgt, cond)
+        tgt = tgt + self.dropout(self.ffn(x))
+        return tgt
+    
 def cosine_beta_schedule(timesteps, s=0.008):
     """
     코사인 스케줄에 따른 베타 값 계산.
@@ -121,7 +164,11 @@ class FlowMatchingActionExpert(nn.Module):
         # --- 입력 프로젝션 레이어 ---
         self.text_guidance_proj = nn.Linear(text_guidance_dim, hidden_dim)
         self.action_embed = nn.Linear(action_dim, hidden_dim)
-
+        
+        # 시간/가이던스 정규화(안정화)
+        self.time_norm = nn.LayerNorm(hidden_dim)
+        self.guidance_norm = nn.LayerNorm(hidden_dim)
+        
         # --- 시간 임베딩 ---
         self.time_embed_dim = time_embed_dim
         self.time_mlp = nn.Sequential(
@@ -131,15 +178,12 @@ class FlowMatchingActionExpert(nn.Module):
         )
 
         # --- 핵심 아키텍처: Transformer Decoder ---
-        decoder_layer = nn.TransformerDecoderLayer(
-            d_model=hidden_dim,
-            nhead=nhead,
-            dim_feedforward=hidden_dim * 4,
-            dropout=dropout,
-            batch_first=True,
-            norm_first=True
-        )
-        self.decoder = nn.TransformerDecoder(decoder_layer, num_layers=num_decoder_layers)
+        self.num_decoder_layers = num_decoder_layers
+        self.mod_layers = nn.ModuleList([
+            ModulatedDecoderLayer(hidden_dim, nhead, dropout, ffn_mult=4)
+            for _ in range(num_decoder_layers)
+        ])
+
 
         # --- 출력 헤드 ---
         self.output_head = nn.Sequential(
@@ -147,8 +191,27 @@ class FlowMatchingActionExpert(nn.Module):
             nn.Linear(hidden_dim, action_dim)
         )
         
-        print(f"✅ FlowMatchingActionExpert V2 (Cross-Attention) 초기화 완료")
-        print(f"   {num_decoder_layers}개의 TransformerDecoderLayer 사용")
+        # --- (PATCH A1) Sensor 토큰/타입 임베딩 설정 ---
+        self.use_sensor_tokens = True  # 센서 토큰을 메모리에 함께 넣음 (False로 끄기 가능)
+        self.context_proj = nn.Linear(image_feature_dim, hidden_dim)  # 컨텍스트(비전) 프로젝션
+        self.sensor_proj = nn.Linear(sensor_dim, hidden_dim)          # 센서 벡터/시퀀스 프로젝션
+        self.token_type_embed = nn.Embedding(2, hidden_dim)           # 0=vision, 1=sensor
+
+        # 포지셔널(메모리/타깃) 임베딩
+        self.mem_pos = nn.Parameter(torch.randn(1, 512, hidden_dim))     # 메모리 최대길이 가정
+        self.tgt_pos = nn.Parameter(torch.randn(1, horizon, hidden_dim)) # 타깃 길이=H
+        
+        # (PATCH B1) 디코더 자기어텐션 인과 마스크
+        self.causal_self_attn = True
+        
+        # (PATCH D1) 액션 스케일/로스 가중
+        self.action_scale = nn.Parameter(torch.tensor([10.,10.,10., 1.,1.,1., 1.]), requires_grad=False)  # 데이터 통계로 교체 권장
+        self.min_lambda = 1e-3
+
+
+        print(f"✅ FlowMatchingActionExpert V2 (Cross-Attention + ModulatedDecoder) 초기화 완료")
+        print(f"   {num_decoder_layers}개의 ModulatedDecoderLayer 사용")
+
 
     def sinusoidal_time_embedding(self, t: torch.Tensor) -> torch.Tensor:
         half_dim = self.time_embed_dim // 2
@@ -164,52 +227,102 @@ class FlowMatchingActionExpert(nn.Module):
         t: torch.Tensor,
         context_features: torch.Tensor,
         guidance_vector: torch.Tensor,
+        sensor_features: Optional[torch.Tensor] = None,   # <-- 추가
     ) -> torch.Tensor:
+
         B, H, _ = x_t.shape
+        
+        assert context_features.dim() == 3, f"context_features (B,S,D) 필요, got {context_features.shape}"
+        if self.use_sensor_tokens:
+            assert sensor_features is not None, "sensor_features가 필요합니다(use_sensor_tokens=True)"
 
-        # 1. 컨디셔닝 특징 프로젝션
+        # 1) 시간/가이던스 임베딩
         t_embed = self.time_mlp(self.sinusoidal_time_embedding(t))
-        guidance_embed = self.text_guidance_proj(guidance_vector)
-        
-        # 2. 컨디셔닝 벡터 결합 (텍스트 + 시간)
-        cond_embed = guidance_embed + t_embed
-        
-        # 3. Decoder 입력 준비
-        tgt = self.action_embed(x_t)
-        
-        # `memory`는 cross-attention의 대상이 되는, 이미 프로젝션된 통합 컨텍스트 특징
-        memory = context_features
+        t_embed = self.time_norm(t_embed)  # 안정화
+        guidance_embed = self.guidance_norm(self.text_guidance_proj(guidance_vector))
+        cond_embed = guidance_embed + t_embed  # (B, D)
 
-        # 4. 컨디셔닝 벡터를 `tgt`에 추가하여 쿼리 보강
-        conditioned_tgt = tgt + cond_embed.unsqueeze(1)
+        # 2) 디코더 입력(tgt) + 포지셔널
+        tgt = self.action_embed(x_t) + self.tgt_pos[:, :H]  # (B,H,D)
 
-        # 5. Transformer Decoder 실행
-        decoder_output = self.decoder(tgt=conditioned_tgt, memory=memory)
+        # 3) 메모리(컨텍스트) 프로젝션 + 포지셔널
+        # (PATCH A3) 메모리(비전+센서) 구성 + 포지셔널/타입 임베딩
+        vision_mem = self.context_proj(context_features)  # (B, Sv, D)
+        vision_mem = vision_mem + self.token_type_embed.weight[0].view(1, 1, -1)
 
-        # 6. 최종 속도 예측
-        velocity = self.output_head(decoder_output)
+        if self.use_sensor_tokens:
+            assert sensor_features is not None, "use_sensor_tokens=True이면 sensor_features 필요"
+            if sensor_features.dim() == 2:
+                sensor_tok = self.sensor_proj(sensor_features).unsqueeze(1)  # (B,1,D)
+            else:
+                sensor_tok = self.sensor_proj(sensor_features)               # (B,Ss,D)
+            sensor_tok = sensor_tok + self.token_type_embed.weight[1].view(1, 1, -1)
+
+            Sv = vision_mem.size(1)
+            Ss = sensor_tok.size(1)
+            vision_mem = vision_mem + self.mem_pos[:, :Sv]
+            sensor_tok = sensor_tok + (self.mem_pos[:, :Ss] if Ss <= self.mem_pos.size(1) else 0.0)
+
+            memory = torch.cat([vision_mem, sensor_tok], dim=1)  # (B, Sv+Ss, D)
+        else:
+            Sv = vision_mem.size(1)
+            memory = vision_mem + self.mem_pos[:, :Sv]
+
+
+        # 4) 컨디셔닝 벡터를 tgt에 주입
+        conditioned_tgt = tgt + cond_embed.unsqueeze(1)  # (B, H, D)
+        
+        tgt_mask = None
+        if self.causal_self_attn:
+            H_ = conditioned_tgt.size(1)
+            tgt_mask = torch.triu(torch.ones(H_, H_, device=conditioned_tgt.device), diagonal=1).bool()
+
+        # 5) Transformer Decoder
+        x = conditioned_tgt
+        for i in range(self.num_decoder_layers):
+            x = self.mod_layers[i](x, memory, cond_embed, tgt_mask=tgt_mask)
+        decoder_output = x
+
+
+        # 6) 속도장 예측
+        velocity = self.output_head(decoder_output)  # (B, H, action_dim)
         return velocity
+
 
     def compute_loss(
         self,
         actions: torch.Tensor,
         context_features: torch.Tensor,
         guidance_vector: torch.Tensor,
+        sensor_features: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
-        x_t, u_t, t_scalar = self.flow.compute_flow_and_target(actions)
-        v_pred = self.forward(x_t, t_scalar, context_features, guidance_vector)
-        loss = torch.nn.functional.smooth_l1_loss(v_pred, u_t)
+        # 스케일 정규화
+        actions_n = actions / self.action_scale  # (B,H,A)
+
+        x_t, u_t, t_scalar = self.flow.compute_flow_and_target(actions_n)
+        v_pred = self.forward(x_t, t_scalar, context_features, guidance_vector, sensor_features=sensor_features)
+
+        # λ(t) = (1 - t)
+        lam = (1.0 - t_scalar).clamp_(min=0.0)
+        lam = lam.view(lam.size(0), -1).mean(dim=1)  # (B,)
+        lam = lam.view(-1, 1, 1).clamp(min=self.min_lambda)
+
+        loss = F.smooth_l1_loss(v_pred, u_t, reduction='none')
+        loss = (lam * loss).mean(dim=(1, 2)).mean()
         return loss
+
 
     @torch.no_grad()
     def sample(
         self,
         context_features: torch.Tensor,
         guidance_vector: torch.Tensor,
+        sensor_features: Optional[torch.Tensor] = None,   # <-- 추가
         batch_size: Optional[int] = None,
-        num_steps: int = 10,
-        method: str = 'euler'
+        num_steps: int = 6,                               # 기본값 변경
+        method: str = 'rk4'                               # 기본값 변경
     ) -> torch.Tensor:
+
         if batch_size is None:
             batch_size = context_features.shape[0]
         device = context_features.device
@@ -217,9 +330,10 @@ class FlowMatchingActionExpert(nn.Module):
         x_0 = torch.randn(batch_size, self.horizon, self.action_dim, device=device, dtype=context_features.dtype)
         
         def velocity_fn(x, t):
-            return self.forward(x, t, context_features, guidance_vector)
-            
+            return self.forward(x, t, context_features, guidance_vector, sensor_features=sensor_features)
+        
         actions = self.flow.sample_ode(velocity_fn, x_0, num_steps=num_steps, method=method)
+        actions = actions * self.action_scale  # 원 단위 복원
         return actions
 
 class RegressionActionExpert(nn.Module):
@@ -244,13 +358,25 @@ class RegressionActionExpert(nn.Module):
         # --- 입력 프로젝션 레이어 ---
         self.text_guidance_proj = nn.Linear(text_guidance_dim, hidden_dim)
         
+        # --- 컨텍스트(이미지 토큰) 프로젝션 & 포지셔널 임베딩 ---
+        self.context_proj = nn.Linear(image_feature_dim, hidden_dim)
+        self.mem_pos = nn.Parameter(torch.randn(1, 512, hidden_dim))  # 최대 길이 가정(슬라이스 사용)
+
         # --- 핵심 아키텍처: Transformer Decoder ---
         self.pos_embed = nn.Parameter(torch.randn(1, horizon, hidden_dim))
-        decoder_layer = nn.TransformerDecoderLayer(
-            d_model=hidden_dim, nhead=nhead, dim_feedforward=hidden_dim * 4,
-            dropout=dropout, batch_first=True, activation='gelu', norm_first=True
-        )
-        self.temporal_decoder = nn.TransformerDecoder(decoder_layer, num_layers=num_decoder_layers)
+        self.num_decoder_layers = num_decoder_layers
+        self.mod_layers = nn.ModuleList([
+            ModulatedDecoderLayer(hidden_dim, nhead, dropout, ffn_mult=4)
+            for _ in range(num_decoder_layers)
+        ])
+        self.causal_self_attn = True  # 시계열 누설 방지 옵션
+
+        # (PATCH F1) 델타 안전 한계
+        self.max_delta = nn.Parameter(torch.tensor([5.,5.,5., 0.2,0.2,0.2, 1.]), requires_grad=False)
+        self.token_type_embed = nn.Embedding(2, hidden_dim)  # 0=vision, 1=sensor
+        self.use_sensor_tokens = True
+        self.sensor_proj = nn.Linear(sensor_dim, hidden_dim)
+
         
         # --- 출력 헤드 ---
         self.trans_head = nn.Sequential(nn.LayerNorm(hidden_dim), nn.Linear(hidden_dim, 3))
@@ -259,10 +385,14 @@ class RegressionActionExpert(nn.Module):
         
         print(f"✅ RegressionActionExpert V2 (Cross-Attention) 초기화 완료")
 
-    def forward(self, 
-                z_chunk: torch.Tensor,
-                context_features: torch.Tensor,
-                guidance_vector: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+            self, 
+            z_chunk: torch.Tensor,
+            context_features: torch.Tensor,
+            guidance_vector: torch.Tensor,
+            sensor_features: Optional[torch.Tensor] = None,
+        ) -> Tuple[torch.Tensor, torch.Tensor]:
+
         B, _, _ = z_chunk.shape
 
         # 1. 컨디셔닝 벡터 생성 (텍스트 가이던스)
@@ -272,24 +402,57 @@ class RegressionActionExpert(nn.Module):
         # 2. Decoder 입력 준비
         # `tgt`는 학습 가능한 위치 임베딩
         tgt = self.pos_embed.repeat(B, 1, 1)
-        
-        # `memory`는 cross-attention의 대상이 되는, 이미 프로젝션된 통합 컨텍스트 특징
-        memory = context_features
+        assert context_features.dim() == 3, f"context_features (B,S,D) 필요, got {context_features.shape}"
+        if self.use_sensor_tokens:
+            assert sensor_features is not None, "sensor_features가 필요합니다(use_sensor_tokens=True)"
 
-        # 3. 컨디셔닝 벡터를 `tgt`에 추가
-        conditioned_tgt = tgt + cond_embed.unsqueeze(1)
+        # 1) 컨디셔닝 벡터
+        guidance_embed = self.text_guidance_proj(guidance_vector)
+        cond_embed = guidance_embed  # (B,D)
 
-        # 4. Transformer Decoder 실행
-        decoded = self.temporal_decoder(tgt=conditioned_tgt, memory=memory)
-        
-        # 5. 최종 델타 예측
+        # 2) 메모리(비전+센서) 구성 + 포지셔널/타입 임베딩
+        vision_mem = self.context_proj(context_features)              # (B,Sv,D)
+        vision_mem = vision_mem + self.token_type_embed.weight[0].view(1,1,-1)
+
+        if self.use_sensor_tokens:
+            if sensor_features.dim() == 2:
+                sensor_tok = self.sensor_proj(sensor_features).unsqueeze(1)  # (B,1,D)
+            else:
+                sensor_tok = self.sensor_proj(sensor_features)               # (B,Ss,D)
+            sensor_tok = sensor_tok + self.token_type_embed.weight[1].view(1,1,-1)
+
+            Sv = vision_mem.size(1)
+            Ss = sensor_tok.size(1)
+            vision_mem = vision_mem + self.mem_pos[:, :Sv]
+            sensor_tok = sensor_tok + (self.mem_pos[:, :Ss] if Ss <= self.mem_pos.size(1) else 0.0)
+            memory = torch.cat([vision_mem, sensor_tok], dim=1)
+        else:
+            Sv = vision_mem.size(1)
+            memory = vision_mem + self.mem_pos[:, :Sv]
+
+        # 3) 타깃 토큰(tgt) + 인과 마스크
+        tgt = self.pos_embed.repeat(B, 1, 1) + cond_embed.unsqueeze(1)
+        tgt_mask = None
+        if self.causal_self_attn:
+            H_ = tgt.size(1)
+            tgt_mask = torch.triu(torch.ones(H_, H_, device=tgt.device), diagonal=1).bool()
+
+        # 4) 모듈식 디코더 스택
+        x = tgt
+        for i in range(self.num_decoder_layers):
+            x = self.mod_layers[i](x, memory, cond_embed, tgt_mask=tgt_mask)
+        decoded = x
+
+        # 5) 델타 예측 + 안전 클램프
         delta_trans = self.trans_head(decoded)
         delta_rot = self.rot_head(decoded)
         delta_grip = self.grip_head(decoded)
         delta = torch.cat([delta_trans, delta_rot, delta_grip], dim=-1)
-        
+        delta = torch.clamp(delta, min=-self.max_delta, max=self.max_delta)
+
         pred_actions = z_chunk + delta
         return pred_actions, delta
+
 
 # ==============================================================================
 # 3. Deprecated 액션 전문가 (DiffusionActionExpert)

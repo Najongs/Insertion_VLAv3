@@ -84,6 +84,8 @@ from qwen_vl_utils import process_vision_info
 from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim.lr_scheduler import LambdaLR
+import deepspeed
+from deepspeed.ops.adam import DeepSpeedCPUAdam
 
 # Set seeds
 import random
@@ -311,21 +313,25 @@ def build_dataloaders(args, rank, world_size, use_cache=True, cache_build_only=F
     if val_dataset_path:
         try:
             new_path = Path(val_dataset_path)
-            first_task_dir = next(d for d in new_path.iterdir() if d.is_dir())
-            first_episode_dir = next(d for d in first_task_dir.iterdir() if d.is_dir() and (d.name.startswith('episode_') or d.name.startswith('data_collection_')))
-
-            ds = UnifiedVLADataset(
-                data_dir=str(first_episode_dir),
-                format='new',
-                horizon=args.horizon if hasattr(args, "horizon") else 8,
-                vlm_reuse_count=args.vlm_reuse_count if hasattr(args, "vlm_reuse_count") else 3,
-                sensor_window_size=args.sensor_window_size if hasattr(args, "sensor_window_size") else 65,
-                action_expert_hz=args.action_expert_hz if hasattr(args, "action_expert_hz") else 10,
-                cache_root=getattr(args, "cache_root", "/home/najo/NAS/VLA/dataset/cache/qwen_vl_features"),
-                prompt_hash_override=getattr(args, "prompt_hash_override", None),
-                filter_by_cache=getattr(args, "filter_by_cache", False),
-            )
-            val_datasets.append(ds)
+            task_dirs = [d for d in new_path.iterdir() if d.is_dir()]
+            picked = []
+            for t in task_dirs:
+                ep = next((d for d in t.iterdir() if d.is_dir() and (d.name.startswith('episode_') or d.name.startswith('data_collection_'))), None)
+                if ep:
+                    picked.append(ep)
+            for ep_dir in picked:
+                ds = UnifiedVLADataset(
+                    data_dir=str(ep_dir), 
+                    format='new',
+                    horizon=args.horizon if hasattr(args, "horizon") else 8,
+                    vlm_reuse_count=args.vlm_reuse_count if hasattr(args, "vlm_reuse_count") else 3,
+                    sensor_window_size=args.sensor_window_size if hasattr(args, "sensor_window_size") else 65,
+                    action_expert_hz=args.action_expert_hz if hasattr(args, "action_expert_hz") else 10,
+                    cache_root=getattr(args, "cache_root", "/home/najo/NAS/VLA/dataset/cache/qwen_vl_features"),
+                    prompt_hash_override=getattr(args, "prompt_hash_override", None),
+                    filter_by_cache=getattr(args, "filter_by_cache", False),
+                )
+                val_datasets.append(ds)
         except (StopIteration, FileNotFoundError) as e:
             print(f"⚠️ Could not create validation set from {val_dataset_path}: {e}")
 
@@ -363,38 +369,35 @@ def build_dataloaders(args, rank, world_size, use_cache=True, cache_build_only=F
 # Flow Matching 학습 루프
 # ===========================================================
 def Train_FlowMatching(
-    model,
+    model_engine,
     data_loader,
-    optimizer,
     num_epochs=3,
     grad_accum_steps=8,
     device="cuda",
-    scheduler=None,
-    sched_on="step",
     val_loader=None,
     start_epoch=0,
     sensor_enabled=True,
     sensor_loss_weight=2.0,
     finetune_vl='none',
 ):
-    """Flow Matching training loop - OPTIMIZED"""
+    """Flow Matching training loop - DeepSpeed OPTIMIZED"""
     rank = dist.get_rank()
     writer = AsyncCheckpointWriter(max_queue=2, sync_every=0) if rank == 0 else None
 
-    model.train()
+    model_engine.train()
     if rank == 0:
         wandb.init(
             project="QwenVLA-FlowMatching",
-            name=f"flow_matching_{time.strftime('%m%d_%H%M')}",
+            name=f"flow_matching_ds_{time.strftime('%m%d_%H%M')}",
             resume="allow",
-            id=f"qvla_flow_matching_{int(time.time())}",
+            id=f"qvla_flow_matching_ds_{int(time.time())}",
             settings=wandb.Settings(start_method="thread", _disable_stats=True),
             config={
                 "model_type": "flow_matching",
-                "lr": optimizer.param_groups[0]["lr"],
+                "lr": model_engine.get_lr()[0] if hasattr(model_engine, 'get_lr') else 0,
                 "grad_accum_steps": grad_accum_steps,
                 "epochs": num_epochs,
-                "scheduler": sched_on,
+                "deepspeed": True,
                 "sensor_enabled": sensor_enabled,
                 "sensor_loss_weight": sensor_loss_weight,
             }
@@ -413,8 +416,7 @@ def Train_FlowMatching(
         epoch_cache_hits = 0
         epoch_cache_total = 0
 
-        optimizer.zero_grad(set_to_none=True)
-        model.train()
+        model_engine.train()
 
         pbar = tqdm(enumerate(data_loader), total=len(data_loader),
                     desc=f"[Rank {rank}] Epoch {epoch+1}",
@@ -456,93 +458,73 @@ def Train_FlowMatching(
                     "prompt_hashes": batch.get("prompt_hash"),
                 }
 
-                with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
-                    # Flow matching: model returns loss directly
-                    flow_loss, _, _ = model(
-                        text_inputs=instructions,
-                        image_inputs=image_inputs,
-                        actions=gt_actions,  # ✅ Use 'actions' parameter
-                        cache_keys=batch["cache_keys"],
-                        sensor_data=sensor_data if sensor_enabled else None,
-                        robot_states=robot_states,
-                        vl_cache_tokens=batch.get("vl_cache"),
-                        vl_cache_metadata=cache_metadata,
+                # Flow matching: model returns loss directly
+                flow_loss, _, _ = model_engine(
+                    text_inputs=instructions,
+                    image_inputs=image_inputs,
+                    actions=gt_actions,  # ✅ Use 'actions' parameter
+                    cache_keys=batch["cache_keys"],
+                    sensor_data=sensor_data if sensor_enabled else None,
+                    robot_states=robot_states,
+                    vl_cache_tokens=batch.get("vl_cache"),
+                    vl_cache_metadata=cache_metadata,
+                )
+
+                # ✅ Count sensor samples for logging
+                if sensor_enabled and has_sensor_mask is not None:
+                    total_sensor_samples += has_sensor_mask.sum().item()
+                    total_nonsensor_samples += (~has_sensor_mask).sum().item()
+
+                # DeepSpeed handles gradient accumulation internally
+                model_engine.backward(flow_loss)
+                model_engine.step()
+
+                total_loss += flow_loss.item()
+                global_step += 1
+
+                if rank == 0:
+                    lr = model_engine.get_lr()[0] if hasattr(model_engine, 'get_lr') else 0
+                    running_cache_ratio = (
+                        epoch_cache_hits / epoch_cache_total
+                        if epoch_cache_total > 0 else 0.0
                     )
+                    cache_status = (
+                        f"{running_cache_ratio*100:.1f}% ({epoch_cache_hits}/{epoch_cache_total})"
+                        if epoch_cache_total > 0 else "0.0% (0/0)"
+                    )
+                    postfix_dict = {
+                        "loss": f"{flow_loss.item():.6f}",
+                        "lr": f"{lr:.2e}",
+                        "cache": cache_status,
+                    }
+                    if sensor_enabled:
+                        postfix_dict["sensor"] = f"{total_sensor_samples}/{total_sensor_samples+total_nonsensor_samples}"
+                    pbar.set_postfix(postfix_dict)
 
-                    # ✅ Count sensor samples for logging
-                    if sensor_enabled and has_sensor_mask is not None:
-                        total_sensor_samples += has_sensor_mask.sum().item()
-                        total_nonsensor_samples += (~has_sensor_mask).sum().item()
-
-                    loss = flow_loss / grad_accum_steps
-
-                sync_context = model.no_sync() if (step + 1) % grad_accum_steps != 0 else nullcontext()
-                with sync_context:
-                    loss.backward()
-
-                total_loss += loss.item() * grad_accum_steps
-
-                if (step + 1) % grad_accum_steps == 0:
-                    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-                    optimizer.step()
-                    optimizer.zero_grad(set_to_none=True)
-
-                    if scheduler is not None and sched_on == "step":
-                        scheduler.step()
-
-                    global_step += 1
-
-                    lr = optimizer.param_groups[0]["lr"]
-                    if rank == 0:
-                        running_cache_ratio = (
-                            epoch_cache_hits / epoch_cache_total
-                            if epoch_cache_total > 0 else 0.0
-                        )
-                        cache_status = (
-                            f"{running_cache_ratio*100:.1f}% ({epoch_cache_hits}/{epoch_cache_total})"
-                            if epoch_cache_total > 0 else "0.0% (0/0)"
-                        )
-                        postfix_dict = {
-                            "loss": f"{loss.item() * grad_accum_steps:.6f}",
-                            "lr": f"{lr:.2e}",
-                            "grad": f"{grad_norm:.2f}",
-                            "cache": cache_status,
-                        }
-                        if sensor_enabled:
-                            postfix_dict["sensor"] = f"{total_sensor_samples}/{total_sensor_samples+total_nonsensor_samples}"
-                        pbar.set_postfix(postfix_dict)
-
-                        log_dict = {
-                            "train/loss_step": loss.item() * grad_accum_steps,
-                            "train/lr": lr,
-                            "train/grad_norm": grad_norm,
-                            "global_step": global_step,
-                            "train/cache_hit_ratio_step": running_cache_ratio,
-                        }
-                        if sensor_enabled:
-                            log_dict["train/sensor_samples"] = total_sensor_samples
-                            log_dict["train/nonsensor_samples"] = total_nonsensor_samples
-                        wandb.log(log_dict)
+                    log_dict = {
+                        "train/loss_step": flow_loss.item(),
+                        "train/lr": lr,
+                        "global_step": global_step,
+                        "train/cache_hit_ratio_step": running_cache_ratio,
+                    }
+                    if sensor_enabled:
+                        log_dict["train/sensor_samples"] = total_sensor_samples
+                        log_dict["train/nonsensor_samples"] = total_nonsensor_samples
+                    wandb.log(log_dict)
 
             except FileNotFoundError as e:
                 if rank == 0:
                     pbar.write(f"⚠️ [Rank {rank}] 캐시 파일 없음, Batch {step} 스킵. (오류: {e})")
-
-                if (step + 1) % grad_accum_steps == 0:
-                    optimizer.zero_grad(set_to_none=True)
                 continue
 
         avg_loss_tensor = torch.tensor(total_loss / len(data_loader), device=device)
         dist.all_reduce(avg_loss_tensor, op=dist.ReduceOp.AVG)
         avg_loss = avg_loss_tensor.item()
 
-        if scheduler is not None and sched_on == "epoch":
-            scheduler.step()
-
         # Validation
         val_loss = None
         if val_loader is not None:
-            model.eval()
+            model_engine.eval()
             val_loss_sum, val_count = 0.0, 0
             with torch.no_grad():
                 for batch in val_loader:
@@ -565,7 +547,7 @@ def Train_FlowMatching(
                         }
 
                         # Flow matching: model returns loss directly
-                        loss, _, _ = model(
+                        loss, _, _ = model_engine(
                             text_inputs=batch["instruction"],
                             image_inputs=batch["images"],
                             actions=gt_actions,
@@ -585,7 +567,7 @@ def Train_FlowMatching(
                         continue
 
             val_loss = val_loss_sum / max(1, val_count)
-            model.train()
+            model_engine.train()
 
         synced_hits, synced_total = _sync_cache_stats(epoch_cache_hits, epoch_cache_total, device)
         cache_hit_ratio = (synced_hits / synced_total) if synced_total > 0 else 0.0
@@ -593,14 +575,16 @@ def Train_FlowMatching(
         # Checkpoint saving
         if rank == 0:
             import psutil, gc
-            trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
-            total_params = sum(p.numel() for p in model.parameters())
+            model_module = model_engine.module
+            trainable = sum(p.numel() for p in model_module.parameters() if p.requires_grad)
+            total_params = sum(p.numel() for p in model_module.parameters())
             frozen = total_params - trainable
 
             gpu_mem = torch.cuda.memory_allocated()/1e9
             cpu_mem = psutil.virtual_memory().percent
             gc.collect()
 
+            lr = model_engine.get_lr()[0] if hasattr(model_engine, 'get_lr') else 0
             log_dict = {
                 "epoch": epoch + 1,
                 "train/loss_epoch": avg_loss,
@@ -610,7 +594,7 @@ def Train_FlowMatching(
                 "params/frozen_ratio": frozen / total_params,
                 "system/gpu_mem_GB": gpu_mem,
                 "system/cpu_mem_%": cpu_mem,
-                "lr/base_lr": optimizer.param_groups[0]["lr"],
+                "lr/base_lr": lr,
                 "train/cache_hit_ratio": cache_hit_ratio,
                 "train/cache_samples": synced_total,
             }
@@ -625,31 +609,28 @@ def Train_FlowMatching(
                   (f"Val: {val_loss:.8f}" if val_loss else ""))
             print(f"   Cache hit ratio: {cache_hit_ratio*100:.2f}% ({int(synced_hits)}/{int(synced_total)})")
 
-            model_module = model.module if hasattr(model, "module") else model
-            ckpt_data = {
-                "epoch": epoch + 1,
-                "model_state_dict": model_module.state_dict(),
-                "sensor_encoder": model_module.sensor_encoder.state_dict() if sensor_enabled else None,
-                "action_expert": model_module.action_expert.state_dict(),
-                "optimizer_state_dict": optimizer.state_dict(),
-                "scheduler_state_dict": scheduler.state_dict() if scheduler else None,
-                "val_loss": val_loss,
-                "finetune_vl": finetune_vl,  # Save current training mode
-            }
-
+            # Simple .pt checkpoint saving (model weights only)
             is_best = val_loss is not None and val_loss < best_val_loss
 
             if is_best:
                 best_val_loss = val_loss
-                best_path = CKPT_DIR / "flow_matching_best.pt"
-                torch.save(ckpt_data, best_path)
-                print(f"🏆 [Best] Validation improved → saved to {best_path}")
+                checkpoint_name = "flow_matching_best.pt"
+                print(f"🏆 [Best] Validation improved → saving checkpoint")
             else:
-                latest_path = CKPT_DIR / "flow_matching_latest.pt"
-                tmp_path = latest_path.with_suffix(".tmp")
-                torch.save(ckpt_data, tmp_path)
-                os.replace(tmp_path, latest_path)
-                print(f"💾 Latest checkpoint updated: {latest_path}")
+                checkpoint_name = "flow_matching_latest.pt"
+                print(f"💾 Saving latest checkpoint")
+
+            # Save only model weights (no optimizer, no scheduler)
+            checkpoint_path = CKPT_DIR / checkpoint_name
+            ckpt_data = {
+                "epoch": epoch + 1,
+                "model_state_dict": model_module.state_dict(),
+                "val_loss": val_loss,
+                "best_val_loss": best_val_loss,
+                "finetune_vl": finetune_vl,
+            }
+            torch.save(ckpt_data, checkpoint_path)
+            print(f"✅ Checkpoint saved: {checkpoint_path}")
 
     if rank == 0 and writer is not None:
         atexit.register(writer.close)
@@ -691,6 +672,10 @@ def main():
     # Sensor options
     parser.add_argument('--sensor_enabled', action='store_true', default=True,
                         help='Enable sensor encoder training')
+    parser.add_argument('--sensor_hidden_dim', type=int, default=512,
+                        help='Conv backbone initial channel (512=heavy final 4096, 256=light final 2048)')
+    parser.add_argument('--sensor_transformer_dim', type=int, default=None,
+                        help='Transformer dimension for projection (None=auto from conv, 1024=medium/lightweight)')
     parser.add_argument('--sensor_loss_weight', type=float, default=2.0)
     parser.add_argument('--fusion_strategy', type=str, default='concat',
                         choices=['concat', 'cross_attention', 'gated'])
@@ -724,6 +709,11 @@ def main():
     parser.add_argument('--vlm_reuse_count', type=int, default=3, help='Number of frames to share a single VLM feature. Set to 1 for 100%% cache generation.')
     parser.add_argument('--cache_loader_only', action='store_true', help='Use lightweight dataloader optimized for cache building')
     parser.add_argument('--skip_dataset_stats', action='store_true', help='Skip dataset statistics collection and printing (faster startup)')
+
+    # DeepSpeed args
+    parser.add_argument('--deepspeed_config', type=str, default='configs/deepspeed_zero2.json',
+                        help='Path to DeepSpeed config file')
+    parser.add_argument('--local_rank', type=int, default=-1, help='Local rank for distributed training (set by DeepSpeed)')
 
     args = parser.parse_args()
 
@@ -806,7 +796,11 @@ def main():
         hidden_dim=1024, sensor_enabled=args.sensor_enabled,
         sensor_encoder_type='force_aware', # Match pre-training architecture
         sensor_input_channels=1026,
-        sensor_temporal_length=65, sensor_output_dim=1024, robot_state_enabled=args.sensor_enabled,
+        sensor_temporal_length=65,
+        sensor_hidden_dim=args.sensor_hidden_dim,  # Conv backbone channels
+        sensor_output_dim=1024,
+        sensor_transformer_dim=args.sensor_transformer_dim,  # Transformer projection
+        robot_state_enabled=args.sensor_enabled,
         robot_state_output_dim=512, # Match pre-training architecture
         finetune_vl=args.finetune_vl,
         image_resize_height=args.image_resize_height, image_resize_width=args.image_resize_width,
@@ -879,113 +873,164 @@ def main():
                 print(f"   ⚠️ Unexpected keys in RobotStateEncoder: {unexpected_keys}")
             print("✅ RobotStateEncoder weights loaded.")
 
-    # DDP
-    model = DDP(model, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=True)
-
-    # Freeze encoders after DDP wrapping and weight loading
+    # Freeze encoders BEFORE DeepSpeed initialization
     if args.freeze_encoders:
         if rank == 0: print("🧊 Freezing Sensor and Robot State Encoders...")
-        for param in model.module.sensor_encoder.parameters():
+        for param in model.sensor_encoder.parameters():
             param.requires_grad = False
-        for param in model.module.robot_state_encoder.parameters():
+        for param in model.robot_state_encoder.parameters():
             param.requires_grad = False
         if rank == 0: print("✅ Encoders frozen.")
 
     # When doing LoRA fine-tuning, freeze everything except VLM (Action Expert included)
     if args.finetune_vl == 'lora':
         if rank == 0: print("🧊 LoRA mode: Freezing Action Expert (only VLM LoRA adapters will be trained)...")
-        for param in model.module.action_expert.parameters():
+        for param in model.action_expert.parameters():
             param.requires_grad = False
         # Also freeze sensor encoders if not already frozen
         if not args.freeze_encoders:
-            for param in model.module.sensor_encoder.parameters():
+            for param in model.sensor_encoder.parameters():
                 param.requires_grad = False
-            for param in model.module.robot_state_encoder.parameters():
+            for param in model.robot_state_encoder.parameters():
                 param.requires_grad = False
         if rank == 0: print("✅ Action Expert frozen. Only VLM LoRA adapters are trainable.")
 
-    # Optimizer (created AFTER freezing)
-    optimizer = torch.optim.AdamW(
-        (p for p in model.parameters() if p.requires_grad),
-        lr=args.lr, weight_decay=0.01, betas=(0.9, 0.95),
+    # Sync all processes before deepspeed.initialize() to prevent timeouts
+    # Rank 0 might be busy loading checkpoints, while other ranks wait.
+    if dist.is_initialized():
+        dist.barrier()
+
+    # Calculate scheduler parameters for DeepSpeed config
+    total_steps = max(1, (len(train_loader) * args.epochs) // max(1, args.grad_accum))
+    warmup_steps = int(total_steps * args.warmup_ratio)
+
+    # DeepSpeed configuration with dynamic values
+    import json
+    with open(args.deepspeed_config, 'r') as f:
+        ds_config = json.load(f)
+
+    # Update auto parameters (ensure they are integers/floats, not strings)
+    ds_config['train_micro_batch_size_per_gpu'] = int(args.batch_size)
+    ds_config['gradient_accumulation_steps'] = int(args.grad_accum)
+    ds_config['train_batch_size'] = int(args.batch_size) * int(args.grad_accum) * world_size
+
+    # Set scheduler parameters
+    ds_config['scheduler']['params']['total_num_steps'] = int(total_steps)
+    ds_config['scheduler']['params']['warmup_num_steps'] = int(warmup_steps)
+    ds_config['scheduler']['params']['warmup_min_lr'] = float(args.min_lr)
+    ds_config['scheduler']['params']['warmup_max_lr'] = float(args.lr)
+
+    # Set optimizer LR
+    ds_config['optimizer']['params']['lr'] = float(args.lr)
+
+    # Initialize DeepSpeed
+    model_engine, optimizer, _, scheduler = deepspeed.initialize(
+        model=model,
+        model_parameters=model.parameters(),
+        config=ds_config,
     )
 
-    # Scheduler
-    total_steps = (len(train_loader) * args.epochs) // args.grad_accum
-    scheduler = build_trapezoid_scheduler(
-        optimizer, total_steps=total_steps, base_lr=args.lr, min_lr=args.min_lr,
-        warmup_ratio=args.warmup_ratio, hold_ratio=args.hold_ratio,
-    )
+    # Print freeze status
+    if rank == 0:
+        print("\n" + "="*80)
+        print("🔍 MODEL FREEZE STATUS CHECK")
+        print("="*80)
 
-    # Resume from checkpoint
+        model_module = model_engine.module
+
+        # Check VLM
+        vlm_trainable = sum(p.numel() for p in model_module.vl_model.parameters() if p.requires_grad)
+        vlm_total = sum(p.numel() for p in model_module.vl_model.parameters())
+        print(f"VLM (Qwen2.5-VL):        {vlm_trainable:>12,} / {vlm_total:>12,} trainable ({vlm_trainable/vlm_total*100:.1f}%)")
+
+        # Check Action Expert
+        action_trainable = sum(p.numel() for p in model_module.action_expert.parameters() if p.requires_grad)
+        action_total = sum(p.numel() for p in model_module.action_expert.parameters())
+        print(f"Action Expert:           {action_trainable:>12,} / {action_total:>12,} trainable ({action_trainable/action_total*100:.1f}%)")
+
+        # Check Sensor Encoder
+        if hasattr(model_module, 'sensor_encoder'):
+            sensor_trainable = sum(p.numel() for p in model_module.sensor_encoder.parameters() if p.requires_grad)
+            sensor_total = sum(p.numel() for p in model_module.sensor_encoder.parameters())
+            print(f"Sensor Encoder:          {sensor_trainable:>12,} / {sensor_total:>12,} trainable ({sensor_trainable/sensor_total*100:.1f}%)")
+
+        # Check Robot State Encoder
+        if hasattr(model_module, 'robot_state_encoder'):
+            robot_trainable = sum(p.numel() for p in model_module.robot_state_encoder.parameters() if p.requires_grad)
+            robot_total = sum(p.numel() for p in model_module.robot_state_encoder.parameters())
+            print(f"Robot State Encoder:     {robot_trainable:>12,} / {robot_total:>12,} trainable ({robot_trainable/robot_total*100:.1f}%)")
+
+        # Total
+        total_trainable = sum(p.numel() for p in model_module.parameters() if p.requires_grad)
+        total_params = sum(p.numel() for p in model_module.parameters())
+        print(f"{'-'*80}")
+        print(f"TOTAL:                   {total_trainable:>12,} / {total_params:>12,} trainable ({total_trainable/total_params*100:.1f}%)")
+        print("="*80 + "\n")
+
+    # Resume from checkpoint (.pt file format)
     start_epoch = 0
     if args.resume:
-        if rank == 0: print(f"Resuming from {args.resume}")
-        ckpt = copy_to_local_then_load(Path(args.resume), map_location=device)
+        resume_path = Path(args.resume)
 
-        # Handle positional encoding size mismatch (65 -> 100)
-        state_dict = ckpt["model_state_dict"]
-        has_size_mismatch = False
-        if 'robot_state_encoder.pos_encoder' in state_dict:
-            pretrained_pos_enc = state_dict['robot_state_encoder.pos_encoder']  # [1, 65, 256]
-            current_pos_enc = model.module.robot_state_encoder.pos_encoder  # [1, 100, 256]
+        # Add .pt extension if not provided
+        if not resume_path.suffix:
+            resume_path = resume_path.with_suffix('.pt')
 
-            if pretrained_pos_enc.shape[1] != current_pos_enc.shape[1]:
-                has_size_mismatch = True
-                if rank == 0:
-                    print(f"   ⚠️ Positional encoding size mismatch: {pretrained_pos_enc.shape} -> {current_pos_enc.shape}")
-                    print(f"   🔧 Interpolating positional encoding from {pretrained_pos_enc.shape[1]} to {current_pos_enc.shape[1]}")
+        if resume_path.is_file():
+            if rank == 0:
+                print(f"📦 Loading checkpoint: {resume_path}")
 
-                # Interpolate along the sequence dimension
-                pretrained_pos_enc = pretrained_pos_enc.permute(0, 2, 1)  # [1, 256, 65]
-                interpolated = torch.nn.functional.interpolate(
-                    pretrained_pos_enc,
-                    size=current_pos_enc.shape[1],
-                    mode='linear',
-                    align_corners=True
-                )
-                state_dict['robot_state_encoder.pos_encoder'] = interpolated.permute(0, 2, 1)  # [1, 100, 256]
+            ckpt = torch.load(str(resume_path), map_location='cpu')
+            state_dict = ckpt.get("model_state_dict", ckpt)
 
-        # Load model state, but be careful about frozen parts
-        model.module.load_state_dict(state_dict, strict=False)
+            # Handle positional encoding size mismatch (65 -> 100)
+            if 'robot_state_encoder.pos_encoder' in state_dict:
+                pretrained_pos_enc = state_dict['robot_state_encoder.pos_encoder']
+                current_pos_enc = model_engine.module.robot_state_encoder.pos_encoder
 
-        # Check if training mode has changed (LoRA -> normal or normal -> LoRA)
-        # This affects which parameters are trainable, so optimizer state won't match
-        prev_finetune_mode = ckpt.get("finetune_vl", None)  # Get saved mode from checkpoint
-        current_finetune_mode = args.finetune_vl
-        mode_changed = prev_finetune_mode is not None and prev_finetune_mode != current_finetune_mode
+                if pretrained_pos_enc.shape[1] != current_pos_enc.shape[1]:
+                    if rank == 0:
+                        print(f"   🔧 Interpolating positional encoding: {pretrained_pos_enc.shape} -> {current_pos_enc.shape}")
+                    pretrained_pos_enc = pretrained_pos_enc.permute(0, 2, 1)
+                    interpolated = torch.nn.functional.interpolate(
+                        pretrained_pos_enc, size=current_pos_enc.shape[1],
+                        mode='linear', align_corners=True
+                    )
+                    state_dict['robot_state_encoder.pos_encoder'] = interpolated.permute(0, 2, 1)
 
-        # Only load optimizer state if there's no size mismatch AND training mode hasn't changed
-        skip_optimizer = has_size_mismatch or mode_changed
+            # Load model weights
+            missing, unexpected = model_engine.module.load_state_dict(state_dict, strict=False)
+            if rank == 0:
+                if missing:
+                    print(f"   ⚠️ Missing keys: {len(missing)}")
+                if unexpected:
+                    print(f"   ⚠️ Unexpected keys: {len(unexpected)}")
+                print(f"   ✅ Model weights loaded")
 
-        if not skip_optimizer:
-            try:
-                optimizer.load_state_dict(ckpt["optimizer_state_dict"])
-                if scheduler and ckpt.get("scheduler_state_dict"):
-                    scheduler.load_state_dict(ckpt["scheduler_state_dict"])
-                if rank == 0:
-                    print(f"   ✅ Optimizer and scheduler state loaded successfully.")
-            except (ValueError, KeyError, RuntimeError) as e:
-                # Optimizer state doesn't match (e.g., different trainable parameters)
-                if rank == 0:
-                    print(f"   ⚠️ Failed to load optimizer state: {e}")
-                    print(f"   🔧 Starting with fresh optimizer (trainable parameters may have changed).")
-                skip_optimizer = True
+                # Try to resume epoch if available
+                if "epoch" in ckpt:
+                    start_epoch = ckpt["epoch"]
+                    print(f"   ℹ️ Resuming from epoch {start_epoch}")
+                else:
+                    print(f"   ℹ️ Starting from epoch 0")
+
         else:
             if rank == 0:
-                if mode_changed:
-                    print(f"   🔧 Training mode changed ({prev_finetune_mode} -> {current_finetune_mode}) - optimizer will start fresh.")
-                else:
-                    print(f"   ⚠️ Skipping optimizer/scheduler state loading due to size mismatch. Training will start fresh.")
+                print(f"   ⚠️ Checkpoint not found: {resume_path}")
+                print(f"   Starting training from scratch")
 
-        start_epoch = ckpt.get("epoch", 0) if not skip_optimizer else 0
-
-    # Train
+    # Train with DeepSpeed
     Train_FlowMatching(
-        model=model, data_loader=train_loader, optimizer=optimizer, num_epochs=args.epochs,
-        grad_accum_steps=args.grad_accum, device=device, scheduler=scheduler, sched_on=args.sched_on,
-        val_loader=val_loader, start_epoch=start_epoch, sensor_enabled=args.sensor_enabled,
-        sensor_loss_weight=args.sensor_loss_weight, finetune_vl=args.finetune_vl,
+        model_engine=model_engine,
+        data_loader=train_loader,
+        num_epochs=args.epochs,
+        grad_accum_steps=args.grad_accum,
+        device=device,
+        val_loader=val_loader,
+        start_epoch=start_epoch,
+        sensor_enabled=args.sensor_enabled,
+        sensor_loss_weight=args.sensor_loss_weight,
+        finetune_vl=args.finetune_vl,
     )
 
     dist.destroy_process_group()
