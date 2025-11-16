@@ -5,11 +5,11 @@ Qwen2.5-VL 모델이 실제로 어떤 텍스트 응답을 생성하는지 확인
 한 에피소드의 샘플들에 대해 VLM의 전체 생성 결과를 저장합니다.
 
 Usage:
-    python preview_vlm_responses.py \
-        --episode_dir /path/to/episode \
-        --output_dir ./vlm_preview \
-        --num_samples 10 \
-        --vlm_model Qwen/Qwen2.5-VL-3B-Instruct
+python preview_vlm_responses.py \
+    --episode_dir /home/najo/NAS/VLA/dataset/New_dataset4/Eye_trocar/data_collection_20251115_001808 \
+    --output_dir ./vlm_preview \
+    --num_samples 10 \
+    --vlm_model Qwen/Qwen2.5-VL-3B-Instruct
 """
 
 import argparse
@@ -139,25 +139,29 @@ def preview_episode_responses(
         metadata = json.load(f)
 
     task_name = episode_path.parent.name.replace("_", " ")
-    instruction = f"""Respond ONLY with the next action.
+    instruction = f"""
 Environment Context:
-- This is a Meca500 robot workspace.
-- The end-effector holds a needle; the needle tip is the tool.
+- This is a Meca500 robot.
+- The end-effector made by 3d pinter the needle tip have to contact with {task_name}.
 - The scene is an optical table with many holes, but these are NOT targets.
 - The ONLY true insertion target is the {task_name}.
 
 Task:
-You must analyze the five camera views and determine the needle’s relative position to the {task_name}.
+You must analyze the views and determine the needle’s relative position to the {task_name}.
 Identify:
 1) needle tip location
 2) alignment relative to the {task_name} center
 3) required direction to align for insertion
+4) If the needle tip is inserted at the {task_name}, it is Done of task
+additional infomation - An eye trocar is a small silver hole in a silicone eye model phantom 
+
+(explain little bit briefly)
 
 Respond with:
 - target visibility
 - needle alignment
 - required adjustment direction
-- insertion readiness (yes/no)
+- distance with {task_name} and needle tip point
 """
     print(f"📝 Instruction:\n{instruction}")
     print()
@@ -180,14 +184,29 @@ Respond with:
         print(f"   - {view_name}: {len(images)} images")
     print()
 
-    # Determine total samples
+    # Determine total samples (spread evenly across the episode)
     max_images = max(len(imgs) for imgs in image_dirs.values())
+    if max_images == 0:
+        raise ValueError("No images found in the episode views.")
+
     total_samples = min(num_samples, max_images)
+    if total_samples <= 0:
+        raise ValueError("num_samples must be greater than 0.")
+
+    if total_samples == 1:
+        sample_indices = [0]
+    else:
+        sample_indices = [
+            (i * (max_images - 1)) // (total_samples - 1)
+            for i in range(total_samples)
+        ]
 
     # Calculate VLM indices (matching dataset logic)
+    reuse = max(1, vlm_reuse_count)
     vlm_indices = []
-    for sample_idx in range(total_samples):
-        vlm_idx = (sample_idx // vlm_reuse_count) * vlm_reuse_count
+    for sample_idx in sample_indices:
+        vlm_group = sample_idx // reuse
+        vlm_idx = vlm_group * reuse
         vlm_indices.append((sample_idx, vlm_idx))
 
     # Remove duplicates (only keep first occurrence of each vlm_idx)

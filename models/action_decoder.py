@@ -143,9 +143,9 @@ class FlowMatchingActionExpert(nn.Module):
     """
     def __init__(
         self,
-        image_feature_dim: int = 3072,
-        text_guidance_dim: int = 3072,
-        sensor_dim: int = 6144,
+        image_feature_dim: int = 2048,
+        text_guidance_dim: int = 2048,
+        sensor_dim: int = 2048,
         action_dim: int = 7,
         horizon: int = 8,
         hidden_dim: int = 1024,
@@ -342,9 +342,9 @@ class RegressionActionExpert(nn.Module):
     이미지 특징 시퀀스에 대한 Cross-Attention을 수행합니다.
     """
     def __init__(self,
-                 image_feature_dim: int = 3072,
-                 text_guidance_dim: int = 3072,
-                 sensor_dim: int = 6144,
+                 image_feature_dim: int = 2048,
+                 text_guidance_dim: int = 2048,
+                 sensor_dim: int = 2048,
                  action_dim: int = 7,
                  horizon: int = 8,
                  hidden_dim: int = 1024,

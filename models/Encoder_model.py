@@ -327,8 +327,8 @@ class ForceAwareSensorEncoder(nn.Module):
                 force_channels=1,
                 temporal_length=65,
                 dist_hidden_dim=512,
-                force_hidden_dim=128,
-                output_dim=256,
+                force_hidden_dim=48,
+                output_dim=1024,
                 transformer_dim=None,
                 **kwargs):
         super().__init__()

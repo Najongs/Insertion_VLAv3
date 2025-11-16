@@ -158,7 +158,7 @@ class UnifiedVLADataset(OldFormatDatasetMixin, NewFormatDatasetMixin, Dataset):
             self.prompt_hash = self._prompt_hash_override
         else:
             self.prompt_hash = hashlib.sha256(self.instruction.encode()).hexdigest()[:8]
-
+        
         # --- Apply Ablation Settings ---
         if self.disable_sensor:
             self.has_sensor = False

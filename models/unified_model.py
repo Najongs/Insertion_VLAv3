@@ -126,7 +126,7 @@ class QwenVLAUnified(nn.Module):
         # 로봇 상태 인코더 매개변수
         robot_state_enabled=True,
         robot_state_temporal_length=100,
-        robot_state_output_dim=512, # 학습 스크립트에 명시된 값
+        robot_state_output_dim=1024, # 학습 스크립트에 명시된 값
         # 특징 융합 매개변수
         fusion_strategy='cross_attention', # 'concat', 'cross_attention', 'gated'
         # Flow Matching 매개변수
@@ -228,7 +228,13 @@ class QwenVLAUnified(nn.Module):
             self.processor = None
             self.vl_model = None
             self.vl_encoder = None
-            vl_hidden_size = 2048  # Qwen2.5-VL-3B 기본 hidden_size
+            inferred_dim = self._infer_cached_vl_hidden_size(external_cache_root)
+            if inferred_dim:
+                vl_hidden_size = inferred_dim
+                print(f"   📦 캐시 기반 hidden_size 자동 감지: {vl_hidden_size}")
+            else:
+                vl_hidden_size = 2048  # 기본값 (Qwen2.5-VL-3B)
+                print(f"   ⚠️ 캐시에서 hidden_size를 찾지 못해 기본값 {vl_hidden_size} 사용")
 
         if sensor_enabled:
             # Conv backbone 최종 채널 계산: hidden_dim * (2 ** 3) = hidden_dim * 8
@@ -249,8 +255,7 @@ class QwenVLAUnified(nn.Module):
                 self.sensor_encoder = ForceAwareSensorEncoder(
                     dist_channels=sensor_input_channels - 1, force_channels=1,
                     temporal_length=sensor_temporal_length, dist_hidden_dim=sensor_hidden_dim,
-                    force_hidden_dim=128, output_dim=sensor_output_dim,
-                    use_transformer=True, num_transformer_layers=2,
+                    use_transformer=True, num_transformer_layers=1,
                     transformer_dim=sensor_transformer_dim  # 경량화 옵션
                 ).to(dtype=torch.bfloat16, device="cuda")
             else:
@@ -278,8 +283,8 @@ class QwenVLAUnified(nn.Module):
         if self.robot_state_enabled:
             self.robot_state_encoder = RobotStateEncoder(
                 input_dim=12, temporal_length=robot_state_temporal_length,
-                model_dim=256, output_dim=robot_state_output_dim, # 수정: robot_state_output_dim 사용
-                num_layers=3, num_heads=8, dropout=0.1
+                model_dim=512, output_dim=robot_state_output_dim, # 수정: robot_state_output_dim 사용
+                num_layers=4, num_heads=8, dropout=0.1
             ).to(dtype=torch.bfloat16, device="cuda")
         else:
             self.robot_state_encoder = None
@@ -291,42 +296,29 @@ class QwenVLAUnified(nn.Module):
             combined_sensor_dim += robot_state_output_dim # 수정: robot_state_output_dim 더하기
 
         # --- 특징 프로젝션 레이어 (차원 통일) ---
-        self.vl_proj = nn.Linear(vl_hidden_size, hidden_dim)
-        if self.sensor_enabled:
-            self.sensor_proj = nn.Linear(sensor_output_dim, hidden_dim)
-        if self.robot_state_enabled:
-            self.robot_state_proj = nn.Linear(robot_state_output_dim, hidden_dim)
-
-        # 새로 추가된 프로젝션 레이어들을 모델과 동일한 디바이스 및 dtype으로 이동
-        if not cache_only_mode:
-            device = next(self.vl_model.parameters()).device
-            dtype = next(self.vl_model.parameters()).dtype
-        else:
-            device = torch.device("cuda")
-            dtype = torch.bfloat16
-
-        self.vl_proj.to(device=device, dtype=dtype)
-        if hasattr(self, 'sensor_proj'):
-            self.sensor_proj.to(device=device, dtype=dtype)
-        if hasattr(self, 'robot_state_proj'):
-            self.robot_state_proj.to(device=device, dtype=dtype)
+        # V2 아키텍처에서는 ActionExpert 내부에서 프로젝션을 처리하므로 이 부분은 제거됩니다.
+        # self.vl_proj = nn.Linear(vl_hidden_size, hidden_dim)
+        # if self.sensor_enabled:
+        #     self.sensor_proj = nn.Linear(sensor_output_dim, hidden_dim)
+        # if self.robot_state_enabled:
+        #     self.robot_state_proj = nn.Linear(robot_state_output_dim, hidden_dim)
 
         if model_type == 'diffusion':
             raise ValueError("Diffusion 모델은 더 이상 사용되지 않습니다. 'flow_matching' 또는 'regression'을 사용해주십시오.")
         elif model_type == 'flow_matching':
             self.action_expert = FlowMatchingActionExpert(
-                image_feature_dim=hidden_dim, # 이제 프로젝션된 차원을 사용
+                image_feature_dim=vl_hidden_size,
                 text_guidance_dim=vl_hidden_size,
-                sensor_dim=0, # action_expert 내부에서는 더 이상 사용하지 않음
+                sensor_dim=combined_sensor_dim,
                 action_dim=action_dim,
                 horizon=horizon,
                 hidden_dim=hidden_dim,
             ).to(dtype=torch.bfloat16, device="cuda")
         else:  # regression
             self.action_expert = RegressionActionExpert(
-                image_feature_dim=hidden_dim, # 이제 프로젝션된 차원을 사용
+                image_feature_dim=vl_hidden_size,
                 text_guidance_dim=vl_hidden_size,
-                sensor_dim=0, # action_expert 내부에서는 더 이상 사용하지 않음
+                sensor_dim=combined_sensor_dim,
                 action_dim=action_dim,
                 horizon=horizon,
                 hidden_dim=hidden_dim,
@@ -395,6 +387,45 @@ class QwenVLAUnified(nn.Module):
         if hasattr(self, 'vl_encoder'):
             self.vl_encoder.set_cache_limit_gb(limit_gb)
 
+    @staticmethod
+    def _infer_cached_vl_hidden_size(cache_root: Optional[str]) -> Optional[int]:
+        """외부 캐시에서 VL hidden size 추론 (cache_only_mode 전용)."""
+        if not cache_root:
+            return None
+
+        cache_root_path = Path(cache_root)
+        if not cache_root_path.exists():
+            return None
+
+        try:
+            prompt_dirs = [d for d in cache_root_path.iterdir() if d.is_dir()]
+        except Exception:
+            return None
+
+        for prompt_dir in prompt_dirs:
+            try:
+                cache_files = sorted(prompt_dir.glob("*.pt"))
+            except Exception:
+                continue
+
+            for cache_file in cache_files:
+                try:
+                    cached = torch.load(cache_file, map_location="cpu")
+                except Exception:
+                    continue
+
+                if isinstance(cached, tuple) and len(cached) == 2:
+                    img_tokens, txt_tokens = cached
+                    if isinstance(txt_tokens, torch.Tensor) and txt_tokens.shape[-1] > 0:
+                        return int(txt_tokens.shape[-1])
+                    if isinstance(img_tokens, torch.Tensor) and img_tokens.dim() >= 3 and img_tokens.shape[-1] > 0:
+                        return int(img_tokens.shape[-1])
+                elif isinstance(cached, torch.Tensor) and cached.dim() >= 2:
+                    if cached.shape[-1] > 0:
+                        return int(cached.shape[-1])
+
+        return None
+
     def _prepare_dataloader_cached_vl_tokens(self, cached_batch: Optional[List[Optional[Tuple[torch.Tensor, torch.Tensor]]]], device: torch.device) -> Tuple[Optional[Tuple[Union[torch.Tensor, List], Union[torch.Tensor, List]]], Optional[List[int]]]:
         """
         데이터로더에서 제공된 캐시된 VL 튜플(이미지, 텍스트)을 준비합니다.
@@ -410,15 +441,20 @@ class QwenVLAUnified(nn.Module):
         has_any_valid_tensor = False
 
         for idx, item in enumerate(cached_batch):
-            if isinstance(item, (list, tuple)) and len(item) == 2 and all(isinstance(t, torch.Tensor) and t.numel() > 0 for t in item):
+            if isinstance(item, (list, tuple)) and len(item) == 2:
                 img_t, txt_t = item
-                prepared_img_tokens.append(img_t.to(device=device, dtype=target_dtype, non_blocking=True))
-                prepared_txt_tokens.append(txt_t.to(device=device, dtype=target_dtype, non_blocking=True))
-                has_any_valid_tensor = True
-            else:
-                prepared_img_tokens.append(None)
-                prepared_txt_tokens.append(None)
-                missing_indices.append(idx)
+                img_is_tensor = isinstance(img_t, torch.Tensor) and img_t.dim() == 3
+                txt_is_tensor = isinstance(txt_t, torch.Tensor) and txt_t.numel() > 0
+
+                if img_is_tensor and txt_is_tensor:
+                    prepared_img_tokens.append(img_t.to(device=device, dtype=target_dtype, non_blocking=True))
+                    prepared_txt_tokens.append(txt_t.to(device=device, dtype=target_dtype, non_blocking=True))
+                    has_any_valid_tensor = True
+                    continue
+
+            prepared_img_tokens.append(None)
+            prepared_txt_tokens.append(None)
+            missing_indices.append(idx)
 
         if not has_any_valid_tensor:
             return None, None
@@ -548,7 +584,16 @@ class QwenVLAUnified(nn.Module):
                 raise RuntimeError("⚠️ 데이터로더 캐시와 신규 인코딩 후에도 VL 토큰이 완전히 준비되지 않았습니다.")
         else:
             if self.cache_only_mode:
-                raise RuntimeError("⚠️ cache_only_mode에서는 VL 캐시가 필수입니다. vl_cache_tokens를 제공해주세요.")
+                # If cache is missing in cache_only_mode, return a zero loss for this batch
+                # This effectively skips the sample as requested by the user.
+                if actions is not None and self.training:
+                    return torch.tensor(0.0, device=device, requires_grad=True), None, None
+                else:
+                    # In inference mode, we can't just return a zero loss.
+                    # We must return something of the correct shape.
+                    # Returning zeros is a reasonable fallback.
+                    batch_size = len(text_inputs)
+                    return torch.zeros(batch_size, self.horizon, self.action_dim, device=device), None, None
 
             image_features, guidance_vectors = self.vl_encoder.encode(
                 text_inputs, image_inputs, cache_keys, use_cache=cache
@@ -563,14 +608,23 @@ class QwenVLAUnified(nn.Module):
         if self.robot_state_enabled and robot_states is not None:
             robot_state_features_encoded = self.robot_state_encoder(robot_states.to(device=device, dtype=torch.bfloat16))
 
-        # 3. 모든 컨텍스트 특징을 프로젝션하고 단일 텐서로 결합
-        context_tensors = [self.vl_proj(image_features)]
+        # 3. 센서 특징 결합
+        sensor_tensors = []
         if sensor_features_encoded is not None:
-            context_tensors.append(self.sensor_proj(sensor_features_encoded).unsqueeze(1))
+            sensor_tensors.append(sensor_features_encoded)
         if robot_state_features_encoded is not None:
-            context_tensors.append(self.robot_state_proj(robot_state_features_encoded).unsqueeze(1))
-        
-        context_features = torch.cat(context_tensors, dim=1)
+            sensor_tensors.append(robot_state_features_encoded)
+
+        sensor_features_combined: Optional[torch.Tensor] = None
+        if sensor_tensors:
+            if len(sensor_tensors) > 1:
+                sensor_features_combined = torch.cat(sensor_tensors, dim=-1)
+            else:
+                sensor_features_combined = sensor_tensors[0]
+
+        # V2 Cross-Attention은 3D 텐서(B, S, D)를 기대하므로, 캐시에서 온 2D 텐서를 3D로 변환
+        if image_features is not None and image_features.dim() == 2:
+            image_features = image_features.unsqueeze(1) # [B, D] -> [B, 1, D]
 
         # 4. 모델 타입에 따른 포워드 패스 (V2, Cross-Attention)
         if self.model_type == 'flow_matching':
@@ -578,12 +632,14 @@ class QwenVLAUnified(nn.Module):
                 actions = actions.to(device=device, dtype=image_features.dtype)
                 with torch.autocast(device.type, dtype=torch.bfloat16):
                     loss = self.action_expert.compute_loss(
-                        actions, context_features, guidance_vectors
+                        actions, image_features, guidance_vectors,
+                        sensor_features=sensor_features_combined
                     )
                 return loss, None, None
             else:
                 sampled_actions = self.action_expert.sample(
-                    context_features, guidance_vectors,
+                    image_features, guidance_vectors,
+                    sensor_features=sensor_features_combined,
                     num_steps=self.flow_steps, method=self.flow_solver
                 )
                 return sampled_actions, None, None
@@ -593,7 +649,8 @@ class QwenVLAUnified(nn.Module):
             z_chunk = z_chunk.to(device=device, dtype=image_features.dtype)
             with torch.autocast(device.type, dtype=torch.bfloat16):
                 pred_actions, delta = self.action_expert(
-                    z_chunk, context_features, guidance_vectors
+                    z_chunk, image_features, guidance_vectors,
+                    sensor_features=sensor_features_combined
                 )
             return pred_actions, delta
         else:

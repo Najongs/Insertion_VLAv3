@@ -370,6 +370,8 @@ def build_dataloaders(args, rank, world_size, use_cache=True, cache_build_only=F
 # ===========================================================
 def Train_FlowMatching(
     model_engine,
+    optimizer,
+    scheduler,
     data_loader,
     num_epochs=3,
     grad_accum_steps=8,
@@ -394,10 +396,10 @@ def Train_FlowMatching(
             settings=wandb.Settings(start_method="thread", _disable_stats=True),
             config={
                 "model_type": "flow_matching",
-                "lr": model_engine.get_lr()[0] if hasattr(model_engine, 'get_lr') else 0,
+                "lr": model_engine.get_lr()[0] if isinstance(model_engine, deepspeed.DeepSpeedEngine) else optimizer.param_groups[0]['lr'],
                 "grad_accum_steps": grad_accum_steps,
                 "epochs": num_epochs,
-                "deepspeed": True,
+                "deepspeed": isinstance(model_engine, deepspeed.DeepSpeedEngine),
                 "sensor_enabled": sensor_enabled,
                 "sensor_loss_weight": sensor_loss_weight,
             }
@@ -476,14 +478,23 @@ def Train_FlowMatching(
                     total_nonsensor_samples += (~has_sensor_mask).sum().item()
 
                 # DeepSpeed handles gradient accumulation internally
-                model_engine.backward(flow_loss)
-                model_engine.step()
+                if isinstance(model_engine, deepspeed.DeepSpeedEngine):
+                    model_engine.backward(flow_loss)
+                    model_engine.step()
+                else:
+                    # Standard PyTorch training
+                    flow_loss.backward()
+                    if (step + 1) % grad_accum_steps == 0:
+                        optimizer.step()
+                        scheduler.step()
+                        optimizer.zero_grad()
+
 
                 total_loss += flow_loss.item()
                 global_step += 1
 
                 if rank == 0:
-                    lr = model_engine.get_lr()[0] if hasattr(model_engine, 'get_lr') else 0
+                    lr = model_engine.get_lr()[0] if isinstance(model_engine, deepspeed.DeepSpeedEngine) else optimizer.param_groups[0]['lr']
                     running_cache_ratio = (
                         epoch_cache_hits / epoch_cache_total
                         if epoch_cache_total > 0 else 0.0
@@ -575,16 +586,16 @@ def Train_FlowMatching(
         # Checkpoint saving
         if rank == 0:
             import psutil, gc
-            model_module = model_engine.module
-            trainable = sum(p.numel() for p in model_module.parameters() if p.requires_grad)
-            total_params = sum(p.numel() for p in model_module.parameters())
+            model_to_save = model_engine.module if isinstance(model_engine, deepspeed.DeepSpeedEngine) else model_engine
+            trainable = sum(p.numel() for p in model_to_save.parameters() if p.requires_grad)
+            total_params = sum(p.numel() for p in model_to_save.parameters())
             frozen = total_params - trainable
 
             gpu_mem = torch.cuda.memory_allocated()/1e9
             cpu_mem = psutil.virtual_memory().percent
             gc.collect()
 
-            lr = model_engine.get_lr()[0] if hasattr(model_engine, 'get_lr') else 0
+            lr = model_engine.get_lr()[0] if isinstance(model_engine, deepspeed.DeepSpeedEngine) else optimizer.param_groups[0]['lr']
             log_dict = {
                 "epoch": epoch + 1,
                 "train/loss_epoch": avg_loss,
@@ -624,7 +635,7 @@ def Train_FlowMatching(
             checkpoint_path = CKPT_DIR / checkpoint_name
             ckpt_data = {
                 "epoch": epoch + 1,
-                "model_state_dict": model_module.state_dict(),
+                "model_state_dict": model_to_save.state_dict(),
                 "val_loss": val_loss,
                 "best_val_loss": best_val_loss,
                 "finetune_vl": finetune_vl,
@@ -663,6 +674,7 @@ def main():
     parser.add_argument('--batch_size', type=int, default=4)
     parser.add_argument('--grad_accum', type=int, default=8)
     parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--weight_decay', type=float, default=0.01)
     parser.add_argument('--sensor_lr', type=float, default=5e-4)
     parser.add_argument('--min_lr', type=float, default=1e-6)
     parser.add_argument('--warmup_ratio', type=float, default=0.03)
@@ -801,7 +813,7 @@ def main():
         sensor_output_dim=1024,
         sensor_transformer_dim=args.sensor_transformer_dim,  # Transformer projection
         robot_state_enabled=args.sensor_enabled,
-        robot_state_output_dim=512, # Match pre-training architecture
+        robot_state_output_dim=1024, # Match pre-training architecture
         finetune_vl=args.finetune_vl,
         image_resize_height=args.image_resize_height, image_resize_width=args.image_resize_width,
         device_map=None,
@@ -900,35 +912,57 @@ def main():
     if dist.is_initialized():
         dist.barrier()
 
-    # Calculate scheduler parameters for DeepSpeed config
-    total_steps = max(1, (len(train_loader) * args.epochs) // max(1, args.grad_accum))
-    warmup_steps = int(total_steps * args.warmup_ratio)
+    # Initialize model, optimizer, and scheduler
+    if use_cache_only_mode:
+        if rank == 0: print("⚡ Cache-only mode: Using standard PyTorch initialization (DeepSpeed skipped)")
+        # Standard PyTorch initialization
+        optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        
+        # Calculate scheduler parameters
+        total_steps = max(1, (len(train_loader) * args.epochs) // max(1, args.grad_accum))
+        warmup_steps = int(total_steps * args.warmup_ratio)
 
-    # DeepSpeed configuration with dynamic values
-    import json
-    with open(args.deepspeed_config, 'r') as f:
-        ds_config = json.load(f)
+        scheduler = build_trapezoid_scheduler(
+            optimizer,
+            total_steps=total_steps,
+            base_lr=args.lr,
+            min_lr=args.min_lr,
+            warmup_ratio=args.warmup_ratio,
+            hold_ratio=args.hold_ratio,
+        )
+        model_engine = model # In non-deepspeed mode, model_engine is just the model
+    else:
+        if rank == 0: print("🚀 Full training mode: Initializing with DeepSpeed")
+        # Calculate scheduler parameters for DeepSpeed config
+        total_steps = max(1, (len(train_loader) * args.epochs) // max(1, args.grad_accum))
+        warmup_steps = int(total_steps * args.warmup_ratio)
 
-    # Update auto parameters (ensure they are integers/floats, not strings)
-    ds_config['train_micro_batch_size_per_gpu'] = int(args.batch_size)
-    ds_config['gradient_accumulation_steps'] = int(args.grad_accum)
-    ds_config['train_batch_size'] = int(args.batch_size) * int(args.grad_accum) * world_size
+        # DeepSpeed configuration with dynamic values
+        import json
+        with open(args.deepspeed_config, 'r') as f:
+            ds_config = json.load(f)
 
-    # Set scheduler parameters
-    ds_config['scheduler']['params']['total_num_steps'] = int(total_steps)
-    ds_config['scheduler']['params']['warmup_num_steps'] = int(warmup_steps)
-    ds_config['scheduler']['params']['warmup_min_lr'] = float(args.min_lr)
-    ds_config['scheduler']['params']['warmup_max_lr'] = float(args.lr)
+        # Update auto parameters (ensure they are integers/floats, not strings)
+        ds_config['train_micro_batch_size_per_gpu'] = int(args.batch_size)
+        ds_config['gradient_accumulation_steps'] = int(args.grad_accum)
+        ds_config['train_batch_size'] = int(args.batch_size) * int(args.grad_accum) * world_size
 
-    # Set optimizer LR
-    ds_config['optimizer']['params']['lr'] = float(args.lr)
+        # Set scheduler parameters
+        ds_config['scheduler']['params']['total_num_steps'] = int(total_steps)
+        ds_config['scheduler']['params']['warmup_num_steps'] = int(warmup_steps)
+        ds_config['scheduler']['params']['warmup_min_lr'] = float(args.min_lr)
+        ds_config['scheduler']['params']['warmup_max_lr'] = float(args.lr)
 
-    # Initialize DeepSpeed
-    model_engine, optimizer, _, scheduler = deepspeed.initialize(
-        model=model,
-        model_parameters=model.parameters(),
-        config=ds_config,
-    )
+        # Set optimizer LR
+        ds_config['optimizer']['params']['lr'] = float(args.lr)
+        ds_config['optimizer']['params']['weight_decay'] = float(args.weight_decay)
+
+        # Initialize DeepSpeed
+        model_engine, optimizer, _, scheduler = deepspeed.initialize(
+            model=model,
+            model_parameters=model.parameters(),
+            config=ds_config,
+        )
 
     # Print freeze status
     if rank == 0:
@@ -936,33 +970,37 @@ def main():
         print("🔍 MODEL FREEZE STATUS CHECK")
         print("="*80)
 
-        model_module = model_engine.module
+        model_module = model_engine.module if isinstance(model_engine, deepspeed.DeepSpeedEngine) else model_engine
 
         # Check VLM
-        vlm_trainable = sum(p.numel() for p in model_module.vl_model.parameters() if p.requires_grad)
-        vlm_total = sum(p.numel() for p in model_module.vl_model.parameters())
-        print(f"VLM (Qwen2.5-VL):        {vlm_trainable:>12,} / {vlm_total:>12,} trainable ({vlm_trainable/vlm_total*100:.1f}%)")
+        model_to_check = model_engine.module if isinstance(model_engine, deepspeed.DeepSpeedEngine) else model_engine
+        if model_to_check.vl_model is not None:
+            vlm_trainable = sum(p.numel() for p in model_to_check.vl_model.parameters() if p.requires_grad)
+            vlm_total = sum(p.numel() for p in model_to_check.vl_model.parameters())
+            print(f"VLM (Qwen2.5-VL):        {vlm_trainable:>12,} / {vlm_total:>12,} trainable ({vlm_trainable/vlm_total*100:.1f}%)")
+        else:
+            print(f"VLM (Qwen2.5-VL):        Not loaded (cache_only_mode)")
 
         # Check Action Expert
-        action_trainable = sum(p.numel() for p in model_module.action_expert.parameters() if p.requires_grad)
-        action_total = sum(p.numel() for p in model_module.action_expert.parameters())
+        action_trainable = sum(p.numel() for p in model_to_check.action_expert.parameters() if p.requires_grad)
+        action_total = sum(p.numel() for p in model_to_check.action_expert.parameters())
         print(f"Action Expert:           {action_trainable:>12,} / {action_total:>12,} trainable ({action_trainable/action_total*100:.1f}%)")
 
         # Check Sensor Encoder
-        if hasattr(model_module, 'sensor_encoder'):
-            sensor_trainable = sum(p.numel() for p in model_module.sensor_encoder.parameters() if p.requires_grad)
-            sensor_total = sum(p.numel() for p in model_module.sensor_encoder.parameters())
+        if hasattr(model_to_check, 'sensor_encoder'):
+            sensor_trainable = sum(p.numel() for p in model_to_check.sensor_encoder.parameters() if p.requires_grad)
+            sensor_total = sum(p.numel() for p in model_to_check.sensor_encoder.parameters())
             print(f"Sensor Encoder:          {sensor_trainable:>12,} / {sensor_total:>12,} trainable ({sensor_trainable/sensor_total*100:.1f}%)")
 
         # Check Robot State Encoder
-        if hasattr(model_module, 'robot_state_encoder'):
-            robot_trainable = sum(p.numel() for p in model_module.robot_state_encoder.parameters() if p.requires_grad)
-            robot_total = sum(p.numel() for p in model_module.robot_state_encoder.parameters())
+        if hasattr(model_to_check, 'robot_state_encoder'):
+            robot_trainable = sum(p.numel() for p in model_to_check.robot_state_encoder.parameters() if p.requires_grad)
+            robot_total = sum(p.numel() for p in model_to_check.robot_state_encoder.parameters())
             print(f"Robot State Encoder:     {robot_trainable:>12,} / {robot_total:>12,} trainable ({robot_trainable/robot_total*100:.1f}%)")
 
         # Total
-        total_trainable = sum(p.numel() for p in model_module.parameters() if p.requires_grad)
-        total_params = sum(p.numel() for p in model_module.parameters())
+        total_trainable = sum(p.numel() for p in model_to_check.parameters() if p.requires_grad)
+        total_params = sum(p.numel() for p in model_to_check.parameters())
         print(f"{'-'*80}")
         print(f"TOTAL:                   {total_trainable:>12,} / {total_params:>12,} trainable ({total_trainable/total_params*100:.1f}%)")
         print("="*80 + "\n")
@@ -1022,6 +1060,8 @@ def main():
     # Train with DeepSpeed
     Train_FlowMatching(
         model_engine=model_engine,
+        optimizer=optimizer,
+        scheduler=scheduler,
         data_loader=train_loader,
         num_epochs=args.epochs,
         grad_accum_steps=args.grad_accum,

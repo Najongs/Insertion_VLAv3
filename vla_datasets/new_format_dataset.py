@@ -61,25 +61,29 @@ class NewFormatDatasetMixin:
         task_name = self.data_dir.parent.name.replace("_", " ")
 
         if instruction is None:
-            self.instruction = f"""Respond ONLY with the next action.
+            self.instruction = f"""
 Environment Context:
-- This is a Meca500 robot workspace.
-- The end-effector holds a needle; the needle tip is the tool.
+- This is a Meca500 robot.
+- The end-effector made by 3d pinter the needle tip have to contact with {task_name}.
 - The scene is an optical table with many holes, but these are NOT targets.
 - The ONLY true insertion target is the {task_name}.
 
 Task:
-You must analyze the five camera views and determine the needle’s relative position to the {task_name}.
+You must analyze the views and determine the needle’s relative position to the {task_name}.
 Identify:
 1) needle tip location
 2) alignment relative to the {task_name} center
 3) required direction to align for insertion
+4) If the needle tip is inserted at the {task_name}, it is Done of task
+additional infomation - An eye trocar is a small silver hole in a silicone eye model phantom 
+
+(explain little bit briefly)
 
 Respond with:
 - target visibility
 - needle alignment
 - required adjustment direction
-- insertion readiness (yes/no)
+- distance with {task_name} and needle tip point
 """
         else:
             self.instruction = instruction
