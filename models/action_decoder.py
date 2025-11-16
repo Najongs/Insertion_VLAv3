@@ -47,6 +47,7 @@ class ModulatedDecoderLayer(nn.Module):
             nn.Linear(hidden_dim * ffn_mult, hidden_dim),
         )
         self.dropout = nn.Dropout(dropout)
+        self.last_cross_attn_weights: Optional[torch.Tensor] = None
 
     def forward(self, tgt, memory, cond, tgt_mask=None, memory_key_padding_mask=None):
         x = self.self_ln(tgt, cond)
@@ -54,7 +55,15 @@ class ModulatedDecoderLayer(nn.Module):
         tgt = tgt + self.dropout(sa)
 
         x = self.cross_ln(tgt, cond)
-        ca, _ = self.cross_attn(x, memory, memory, key_padding_mask=memory_key_padding_mask, need_weights=False)
+        ca, attn_w = self.cross_attn(
+            x,
+            memory,
+            memory,
+            key_padding_mask=memory_key_padding_mask,
+            need_weights=True,
+            average_attn_weights=False,
+        )
+        self.last_cross_attn_weights = attn_w.detach()
         tgt = tgt + self.dropout(ca)
 
         x = self.ffn_ln(tgt, cond)

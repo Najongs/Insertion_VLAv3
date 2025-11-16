@@ -377,13 +377,13 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
     CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --num_gpus=4 \
     TRAIN_FlowMatching.py \
     --deepspeed_config configs/deepspeed_zero2_offload.json \
-    --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset4/Eye_trocar" \
+    --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset5/Eye_trocar" \
     --batch_size 32 \
     --grad_accum 1 \
     --image_resize_height 360 \
     --image_resize_width 640 \
     --epochs 10 \
-    --lr 1e-5 \
+    --lr 3e-5 \
     --min_lr 1e-7 \
     --finetune_vl full \
     --sensor_enabled \
@@ -391,12 +391,12 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
     --sensor_transformer_dim 256 \
     --vlm_reuse_count 1 \
     --fusion_strategy "cross_attention" \
-    --load_robot_state_encoder_checkpoint "./checkpoints/robot_state_mae_best.pth" \
-    --load_sensor_encoder_checkpoint ./checkpoints/sensor_clip_latest.pth \
     --num_workers 16 \
     --skip_dataset_stats \
-    --resume "./checkpoints/backup/flow_matching_best.pt"
-#
+    --resume "./checkpoints/backup/flow_matching_latest.pt"
+
+#    --load_robot_state_encoder_checkpoint "./checkpoints/robot_state_mae_best.pth" \
+    # --load_sensor_encoder_checkpoint ./checkpoints/sensor_clip_latest.pth \
 # echo ""
 # echo "=============== 3.3 FLOW MATCHING TRAINING (STAGE 3: Continued Training) ==============="
 # echo "Epochs: 50, Batch Size: 32, Grad Accum: 2"

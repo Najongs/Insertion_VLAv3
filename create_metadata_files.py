@@ -1,3 +1,7 @@
+"""
+python create_metadata_files.py dataset_root /home/najo/NAS/VLA/dataset/New_dataset5/Eye_trocar
+"""
+
 import json
 import os
 from pathlib import Path

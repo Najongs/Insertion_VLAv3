@@ -21,7 +21,7 @@ Data Sources:
 
 Usage:
     # Standard async inference (recommended)
-    python Async_inference_receiver.py --checkpoint checkpoints/regression_latest.pt --auto-start --vl-reuse 4 --task-name Red_point
+    python Async_inference_receiver.py --checkpoint checkpoints/flow_matching_latest.pt --auto-start --vl-reuse 1 --task-name Eye_trocar
 
     # Save data for debugging
     python Async_inference_receiver.py --checkpoint checkpoints/qwen_vla_sensor_best.pt --save-data
@@ -845,14 +845,20 @@ Respond with:
                 robot_state_features_encoded = self.model.robot_state_encoder(robot_batch)
             timings['robot_encoding'] = (time.time() - t_robot_start) * 1000
 
-            # 3. Build context features (V2: project and concatenate all features)
-            context_tensors = [self.model.vl_proj(image_features)]
-            if sensor_features_encoded is not None:
-                context_tensors.append(self.model.sensor_proj(sensor_features_encoded).unsqueeze(1))
-            if robot_state_features_encoded is not None:
-                context_tensors.append(self.model.robot_state_proj(robot_state_features_encoded).unsqueeze(1))
+            # 3. Prepare vision context + concatenated sensor features for ActionExpert (V2)
+            context_features = image_features
+            if context_features.dim() == 2:
+                context_features = context_features.unsqueeze(1)
 
-            context_features = torch.cat(context_tensors, dim=1)
+            sensor_features_combined = None
+            if sensor_features_encoded is not None and robot_state_features_encoded is not None:
+                sensor_features_combined = torch.cat(
+                    (sensor_features_encoded, robot_state_features_encoded), dim=-1
+                )
+            elif sensor_features_encoded is not None:
+                sensor_features_combined = sensor_features_encoded
+            elif robot_state_features_encoded is not None:
+                sensor_features_combined = robot_state_features_encoded
 
             # 4. Action prediction with V2 architecture
             t_action_start = time.time()
@@ -860,6 +866,7 @@ Respond with:
                 pred_actions = self.model.action_expert.sample(
                     context_features,
                     guidance_vectors,
+                    sensor_features=sensor_features_combined,
                     num_steps=self.config.FLOW_STEPS,
                     method=self.config.FLOW_SOLVER
                 )
@@ -871,7 +878,8 @@ Respond with:
                                         dtype=torch.float32, device=self.device)
 
                 pred_actions, delta = self.model.action_expert(
-                    z_chunk, context_features, guidance_vectors
+                    z_chunk, context_features, guidance_vectors,
+                    sensor_features=sensor_features_combined
                 )
             timings['action_prediction'] = (time.time() - t_action_start) * 1000
 
@@ -929,7 +937,7 @@ Respond with:
 
 
 # ==============================
-# UDP Sensor Receiver
+# UDP Sensor Receiver (수정됨)
 # ==============================
 class SensorUDPReceiver(threading.Thread):
     """Receives sensor data via UDP and updates circular buffer"""
@@ -956,7 +964,8 @@ class SensorUDPReceiver(threading.Thread):
             print(f"[ERROR] Failed to bind UDP socket: {e}")
             return
 
-        print(f"⏳ Calibrating sensor clock offset (first {self.config.SENSOR_CALIBRATION_COUNT} batches)...")
+        # ✅ 수정: 이제 '배치'가 아닌 '패킷' 기준입니다.
+        print(f"⏳ Calibrating sensor clock offset (first {self.config.SENSOR_CALIBRATION_COUNT} packets)...")
 
         while not self.stop_event.is_set():
             try:
@@ -970,56 +979,54 @@ class SensorUDPReceiver(threading.Thread):
 
             recv_time = time.time()
 
-            if len(data) < self.config.SENSOR_TOTAL_PACKET_SIZE:
-                continue
-
+            # ✅ 수정: 단일 패킷을 처리하는 로직으로 변경
             try:
-                # Parse batch header
-                num_packets = struct.unpack('<I', data[:4])[0]
-                expected_size = 4 + (num_packets * self.config.SENSOR_TOTAL_PACKET_SIZE)
-
-                if len(data) != expected_size or num_packets == 0:
+                # 1. 수신한 데이터가 정확히 DataPacket 1개의 크기인지 확인
+                if len(data) != self.config.SENSOR_TOTAL_PACKET_SIZE:
+                    print(f"[UDP Sensor] Warning: Received packet of wrong size. Got {len(data)}, expected {self.config.SENSOR_TOTAL_PACKET_SIZE}")
                     continue
 
-                # Parse packets
-                records = []
-                mv = memoryview(data)[4:]
+                # 2. 'num_packets' 헤더가 없으므로 바로 파싱 시작
+                mv = memoryview(data)
                 offset = 0
-                last_send_ts = 0.0
 
-                for _ in range(num_packets):
-                    header = mv[offset:offset + self.config.SENSOR_PACKET_HEADER_SIZE]
-                    ts, send_ts, force = struct.unpack(self.config.SENSOR_PACKET_HEADER_FORMAT, header)
-                    offset += self.config.SENSOR_PACKET_HEADER_SIZE
+                # 3. 헤더 언패킹
+                header = mv[offset:offset + self.config.SENSOR_PACKET_HEADER_SIZE]
+                ts, send_ts, force = struct.unpack(self.config.SENSOR_PACKET_HEADER_FORMAT, header)
+                offset += self.config.SENSOR_PACKET_HEADER_SIZE
 
-                    aline_bytes = mv[offset:offset + self.config.SENSOR_ALINE_SIZE]
-                    aline = np.frombuffer(aline_bytes, dtype=np.float32).copy()
-                    offset += self.config.SENSOR_ALINE_SIZE
+                # 4. A-line 데이터 언패킹
+                aline_bytes = mv[offset:offset + self.config.SENSOR_ALINE_SIZE]
+                aline = np.frombuffer(aline_bytes, dtype=np.float32).copy()
+                offset += self.config.SENSOR_ALINE_SIZE
 
-                    records.append({
-                        'timestamp': ts,
-                        'send_timestamp': send_ts,
-                        'force': force,
-                        'aline': aline
-                    })
-                    last_send_ts = send_ts
+                # 5. 단일 레코드 생성
+                record = {
+                    'timestamp': ts,
+                    'send_timestamp': send_ts,
+                    'force': force,
+                    'aline': aline
+                }
 
-                # Clock calibration
+                # 6. 클럭 동기화 로직 (유지)
+                #    (이제 이 단일 패킷의 send_ts를 기준으로 계산됩니다)
                 if self.clock_offset is None:
-                    net_plus_offset = recv_time - last_send_ts
+                    net_plus_offset = recv_time - send_ts
                     self.calibration_samples.append(net_plus_offset)
 
                     if len(self.calibration_samples) >= self.config.SENSOR_CALIBRATION_COUNT:
                         self.clock_offset = np.mean(self.calibration_samples)
-                        print(f"\n✅ Sensor Clock Offset Calibrated: {self.clock_offset * 1000:.1f} ms\n")
+                        # ✅ 수정: '패킷' 기준으로 변경되었음을 명시
+                        print(f"\n✅ Sensor Clock Offset Calibrated (from {self.config.SENSOR_CALIBRATION_COUNT} packets): {self.clock_offset * 1000:.1f} ms\n")
 
-                # Add to circular buffer
-                self.sensor_buffer.add_samples(records)
-                self.packet_count += num_packets
+                # 7. 버퍼에 추가 (add_samples가 리스트를 받는다고 가정)
+                self.sensor_buffer.add_samples([record])
+                self.packet_count += 1  # ✅ 수정: 1씩 증가
                 self.last_recv_time = recv_time
 
             except Exception as e:
-                print(f"[ERROR] Sensor UDP unpack failed: {e}")
+                # ✅ 수정: 에러 출력 시 수신된 데이터 길이를 포함
+                print(f"[ERROR] Sensor UDP unpack failed (Data len: {len(data)}): {e}")
                 continue
 
         sock.close()
@@ -1106,7 +1113,7 @@ def main():
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging for debugging.")
     parser.add_argument('--robot-ip', type=str, default='10.130.41.111', help='IP address of the robot state publisher (robot_command_receiver.py).')
     parser.add_argument('--auto-start', action='store_true', help='Automatically send START command to robot before inference')
-    parser.add_argument('--start-joints', type=float, nargs=6, default=[191, 1, 309, 1, 92, 2], help='Start joint positions for auto-start (default: [0,0,0,0,0,0])')
+    parser.add_argument('--start-joints', type=float, nargs=6, default=[131.792497, 70.365243, 267.755987, -150.748299, 23.769083, 103.542051], help='Start joint positions for auto-start (default: [0,0,0,0,0,0])')
                         #168.387659, 36.190885, 250.816119, 178.747768, 19.072951, 144.28431 # [169.055308, -22.135383, 232.007663, 177.66655, 19.996871, 144.314525],
     parser.add_argument('--task-name', type=str, default='eye', help='Task name for prompt generation (e.g., eye, yellow_point, blue_point)')
     args = parser.parse_args()
