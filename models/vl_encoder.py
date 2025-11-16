@@ -343,7 +343,8 @@ class VisionLanguageEncoder(torch.nn.Module):
                     if self.view_aggregation == 'weighted_mean':
                         weights = torch.ones(len(views), device=self.device, dtype=torch.bfloat16)
                         for i, view_path in enumerate(views):
-                            if 'View5' in view_path:
+                            # Handle both path strings and PIL Images for testing
+                            if isinstance(view_path, str) and 'View5' in view_path:
                                 weights[i] = self.view5_weight
                         
                         for i in range(len(views)):
