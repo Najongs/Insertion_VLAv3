@@ -21,7 +21,7 @@ Data Sources:
 
 Usage:
     # Standard async inference (recommended)
-    python Async_inference_receiver.py --checkpoint checkpoints/flow_matching_latest.pt --auto-start --vl-reuse 1 --task-name Eye_trocar
+    python Async_inference_receiver.py --checkpoint /home/najo/NAS/VLA/Insertion_VLAv3/checkpoints/backup/flow_matching_best.pt --auto-start --vl-reuse 2 --task-name Eye_trocar
 
     # Save data for debugging
     python Async_inference_receiver.py --checkpoint checkpoints/qwen_vla_sensor_best.pt --save-data
@@ -1113,7 +1113,7 @@ def main():
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging for debugging.")
     parser.add_argument('--robot-ip', type=str, default='10.130.41.111', help='IP address of the robot state publisher (robot_command_receiver.py).')
     parser.add_argument('--auto-start', action='store_true', help='Automatically send START command to robot before inference')
-    parser.add_argument('--start-joints', type=float, nargs=6, default=[131.792497, 70.365243, 267.755987, -150.748299, 23.769083, 103.542051], help='Start joint positions for auto-start (default: [0,0,0,0,0,0])')
+    parser.add_argument('--start-joints', type=float, nargs=6, default=[130.0, 70.0, 265.0, -150.0, 25.0, 105.0], help='Start joint positions for auto-start (default: [0,0,0,0,0,0])')
                         #168.387659, 36.190885, 250.816119, 178.747768, 19.072951, 144.28431 # [169.055308, -22.135383, 232.007663, 177.66655, 19.996871, 144.314525],
     parser.add_argument('--task-name', type=str, default='eye', help='Task name for prompt generation (e.g., eye, yellow_point, blue_point)')
     args = parser.parse_args()
