@@ -8,8 +8,8 @@ window of the provided episode, and stores the following artifacts:
   • RMSE metrics (overall + per-action-dimension) for quick comparison.
   
 python3 evaluate_flowmatching_episode.py \
-    --episode-path /home/najo/NAS/VLA/dataset/New_dataset4/Eye_trocar/data_collection_20251115_001852 \
-    --checkpoint checkpoints/flow_matching_latest.pt \
+    --episode-path /home/najo/NAS/VLA/dataset/New_dataset6/Green_point/data_collection_20251117_232047 \
+    --checkpoint checkpoints/flow_matching_best.pt \
     --output evaluation_results/data_collection_20251115_012126_eval.json \
     --sensor-hidden-dim 128 \
     --sensor-transformer-dim 256 \
