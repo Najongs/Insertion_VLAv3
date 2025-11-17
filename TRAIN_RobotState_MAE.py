@@ -553,9 +553,9 @@ if __name__ == "__main__":
     parser.add_argument('--val_split', type=float, default=0.05, help='Proportion of the dataset to use for validation.')
 
     # Model & Architecture
-    parser.add_argument('--model_dim', type=int, default=256, help='Dimension of the Transformer model.')
+    parser.add_argument('--model_dim', type=int, default=512, help='Dimension of the Transformer model.')
     parser.add_argument('--num_heads', type=int, default=8, help='Number of heads in the Transformer.')
-    parser.add_argument('--num_layers', type=int, default=4, help='Number of layers in the Transformer.')
+    parser.add_argument('--num_layers', type=int, default=6, help='Number of layers in the Transformer.')
     parser.add_argument('--output_dim', type=int, default=1024, help='Output dimension of the encoder projection head.')
     parser.add_argument('--mask_ratio', type=float, default=0.5, help='Ratio of timesteps to mask.')
 

@@ -30,14 +30,14 @@ from peft import LoraConfig, get_peft_model
 if __name__ == "__main__":
     # 직접 실행 시 부모 디렉토리를 sys.path에 추가
     sys.path.insert(0, str(Path(__file__).parent.parent))
-    from models.Encoder_model import RobotStateEncoder, SensorEncoder, ForceAwareSensorEncoder, force_bn_fp32_
-    from models.action_decoder import FlowMatchingActionExpert, RegressionActionExpert, DiffusionActionExpert
+    from models.Encoder_model import RobotStateEncoder, UnifiedGatedSensorEncoder, force_bn_fp32_
+    from models.action_decoder import FlowMatchingActionExpert, RegressionActionExpert
     from models.vl_cache import VLACacheManager, get_cache_manager
     from models.vl_encoder import VisionLanguageEncoder
 else:
     # 모듈로 임포트 시 상대 임포트 사용
-    from .Encoder_model import RobotStateEncoder, SensorEncoder, ForceAwareSensorEncoder, force_bn_fp32_
-    from .action_decoder import FlowMatchingActionExpert, RegressionActionExpert, DiffusionActionExpert
+    from .Encoder_model import RobotStateEncoder, UnifiedGatedSensorEncoder, force_bn_fp32_
+    from .action_decoder import FlowMatchingActionExpert, RegressionActionExpert
     from .vl_cache import VLACacheManager, get_cache_manager
     from .vl_encoder import VisionLanguageEncoder
 
@@ -47,67 +47,10 @@ class QwenVLAUnified(nn.Module):
     Qwen-VL 백본을 기반으로 한 통합 Vision-Language-Action (VLA) 모델입니다.
     센서 융합 및 로봇 상태 인코더를 통해 다양한 양식의 데이터를 통합하여 행동 예측을 수행합니다.
     Flow Matching 또는 Regression 기반의 행동 전문가를 선택할 수 있습니다.
-
-    특징:
-    - 캐싱 및 LoRA 미세 조정을 지원하는 Qwen-VL 백본.
-    - 학습 가능한 센서 인코더 (옵션).
-    - 학습 가능한 행동 전문가 (Flow Matching 또는 Regression).
-    - 멀티뷰 이미지의 병렬 인코딩 및 캐싱을 통한 성능 최적화.
-
-    Args:
-        model_type (Literal['diffusion', 'regression', 'flow_matching']): 사용할 행동 전문가 모델 타입.
-            'diffusion'은 더 이상 사용되지 않습니다. 'flow_matching' 또는 'regression'을 권장합니다.
-        vl_model_name (str, optional): Qwen-VL 모델 이름. Defaults to "Qwen/Qwen2.5-VL-3B-Instruct".
-        action_dim (int, optional): 행동 공간의 차원 (예: 7 for (dx,dy,dz,droll,dpitch,dyaw,gripper)). Defaults to 7.
-        horizon (int, optional): 예측할 행동 시퀀스의 시간 호라이즌. Defaults to 8.
-        hidden_dim (int, optional): 행동 전문가의 은닉 차원. Defaults to 1024.
-        cache_dir (str, optional): 내부 캐시 파일 저장 디렉토리. Defaults to "/home/najo/NAS/VLA/dataset/cache/qwen_vl_features".
-        external_cache_root (Optional[str], optional): 외부(공유) 캐시 디렉토리 경로. Defaults to None.
-        auto_cache_backfill (bool, optional): 외부 캐시에 없는 항목을 자동으로 채울지 여부. Defaults to True.
-
-        # 센서 인코더 매개변수
-        sensor_enabled (bool, optional): 센서 인코더 활성화 여부. Defaults to True.
-        sensor_encoder_type (Literal['default', 'force_aware'], optional):
-            센서 인코더 타입 ('default' 또는 'force_aware'). Defaults to 'default'.
-        sensor_input_channels (int, optional): 센서 입력 채널 수. Defaults to 1026.
-        sensor_temporal_length (int, optional): 센서 시계열의 길이 (예: 650 for full, 65 for async). Defaults to 650.
-        sensor_hidden_dim (int, optional): 센서 인코더의 은닉 차원. Defaults to 512.
-        sensor_output_dim (int, optional): 센서 인코더의 출력 특징 차원. Defaults to 3072.
-
-        # 로봇 상태 인코더 매개변수
-        robot_state_enabled (bool, optional): 로봇 상태 입력을 활성화할지 여부 (관절 + 포즈). Defaults to True.
-        robot_state_temporal_length (int, optional): 로봇 상태 시계열의 시간 윈도우 (예: 100Hz에서 100샘플 = 1초). Defaults to 100.
-
-        # 특징 융합 매개변수
-        fusion_strategy (str, optional): VL 및 센서/로봇 상태 특징 융합 전략 ('concat', 'cross_attention', 'gated'). Defaults to 'concat'.
-
-        # Flow Matching 매개변수 (model_type='flow_matching'일 때만 해당)
-        flow_steps (int, optional): ODE 통합 스텝 수. Defaults to 10.
-        flow_solver (str, optional): ODE 솔버 ('euler' 또는 'rk4'). Defaults to 'euler'.
-
-        # LoRA 매개변수 (선택적 VL 모델 미세 조정용)
-        finetune_vl (Literal['none', 'lora', 'full']): VL 모델 미세 조정 전략.
-            'none'은 동결, 'lora'는 LoRA 적용, 'full'은 전체 미세 조정. Defaults to 'none'.
-        lora_r (int, optional): LoRA 랭크. Defaults to 16.
-        lora_alpha (int, optional): LoRA 알파. Defaults to 32.
-        lora_dropout (float, optional): LoRA 드롭아웃 비율. Defaults to 0.05.
-
-        # 이미지 리사이즈 매개변수 (더 빠른 추론을 위함)
-        image_resize_height (Optional[int], optional): 이미지 리사이즈 높이 (예: 360). Defaults to None.
-        image_resize_width (Optional[int], optional): 이미지 리사이즈 너비 (예: 640). Defaults to None.
-
-        # VL 최적화 매개변수
-        parallel_view_encoding (bool, optional): 멀티뷰 병렬 인코딩 활성화 여부. Defaults to False.
-            True일 경우 이미지 뷰별로 병렬로 VL 임베딩을 계산합니다.
-        view_aggregation (Literal['mean', 'max', 'attention'], optional):
-            멀티뷰 특징 집계 방법 ('mean', 'max', 'attention'). Defaults to 'mean'.
-            'attention'은 현재 'mean'으로 폴백됩니다.
-
-        device_map (Optional[str], optional): 모델 로딩 시 사용할 device_map. Defaults to None.
     """
     def __init__(
         self,
-        model_type: Literal['diffusion', 'regression', 'flow_matching'] = 'flow_matching',
+        model_type: Literal['regression', 'flow_matching'] = 'flow_matching',
         vl_model_name="Qwen/Qwen2.5-VL-3B-Instruct",
         action_dim=7,
         horizon=8,
@@ -115,41 +58,33 @@ class QwenVLAUnified(nn.Module):
         cache_dir="/home/najo/NAS/VLA/dataset/cache/qwen_vl_features",
         external_cache_root: Optional[str] = None,
         auto_cache_backfill: bool = True,
-        # 센서 인코더 매개변수
+        # --- 통합된 인코더 파라미터 ---
         sensor_enabled=True,
-        sensor_encoder_type: Literal['default', 'force_aware'] = 'force_aware', # 기본값을 force_aware로 변경
-        sensor_input_channels=1026,
-        sensor_temporal_length=65, # 비동기 데이터셋 기준 65
-        sensor_hidden_dim=512,  # Conv backbone 초기 채널 (512=heavy 4096, 256=light 2048)
-        sensor_output_dim=1024, # 학습 스크립트에 명시된 값
-        sensor_transformer_dim=None,  # Transformer 차원 축소 (None=auto from conv, 1024=medium)
-        # 로봇 상태 인코더 매개변수
+        sensor_input_channels=1026, # dist_channels(1025) + force_channels(1)
+        sensor_temporal_length=65,
+        sensor_output_dim=3072, # UnifiedGatedSensorEncoder의 기본 출력 차원
         robot_state_enabled=True,
         robot_state_temporal_length=100,
-        robot_state_output_dim=1024, # 학습 스크립트에 명시된 값
-        # 특징 융합 매개변수
-        fusion_strategy='cross_attention', # 'concat', 'cross_attention', 'gated'
-        # Flow Matching 매개변수
+        robot_state_output_dim=1024, # 업그레이드된 RobotStateEncoder의 기본 출력 차원
+        # --- 나머지 파라미터 ---
+        fusion_strategy='cross_attention',
         flow_steps=10,
         flow_solver='euler',
-        # LoRA 매개변수
         finetune_vl='none',
         lora_r=16,
         lora_alpha=32,
         lora_dropout=0.05,
-        # 이미지 및 VL 최적화 매개변수
         image_resize_height=None,
         image_resize_width=None,
         parallel_view_encoding=False,
-        view_aggregation='weighted_mean', # V2 아키텍처 기본값
-        view5_weight=2.0, # V2 아키텍처 기본값
+        view_aggregation='weighted_mean',
+        view5_weight=2.0,
         device_map=None,
-        # 캐시 전용 모드 (VLM 로드 스킵, 메모리 절약)
         cache_only_mode=False):
         super().__init__()
 
-        if model_type not in ['diffusion', 'regression', 'flow_matching']:
-            raise ValueError(f"model_type은 'diffusion', 'regression', 'flow_matching' 중 하나여야 합니다. 현재: {model_type}")
+        if model_type not in ['regression', 'flow_matching']:
+            raise ValueError(f"model_type은 'regression', 'flow_matching' 중 하나여야 합니다. 현재: {model_type}")
 
         self.model_type = model_type
         self.sensor_enabled = sensor_enabled
@@ -173,12 +108,10 @@ class QwenVLAUnified(nn.Module):
             except Exception as e:
                 print(f"⚠️ 외부 캐시 관리자 초기화 실패 ({external_cache_root}): {e}")
 
-        print(f"🚀 QwenVLA 통합 모델 V2 (Cross-Attention) 로딩 중")
+        print(f"🚀 QwenVLA 통합 모델 V3 (Unified Encoders) 로딩 중")
         print(f"   모델 타입: {model_type.upper()}")
         print(f"   센서 활성화: {sensor_enabled}")
         print(f"   로봇 상태 활성화: {robot_state_enabled}")
-        if model_type == 'flow_matching':
-            print(f"   Flow 스텝: {flow_steps}, 솔버: {flow_solver}")
         if cache_only_mode:
             print(f"   ⚡ 캐시 전용 모드: VLM 모델 로드 스킵 (메모리 절약)")
 
@@ -237,54 +170,22 @@ class QwenVLAUnified(nn.Module):
                 print(f"   ⚠️ 캐시에서 hidden_size를 찾지 못해 기본값 {vl_hidden_size} 사용")
 
         if sensor_enabled:
-            # Conv backbone 최종 채널 계산: hidden_dim * (2 ** 3) = hidden_dim * 8
-            conv_final_channels = sensor_hidden_dim * 8
-
-            if sensor_encoder_type == 'force_aware':
-                print("   센서 인코더 타입: Force-Aware")
-                print(f"   📊 Conv backbone: {sensor_input_channels-1}ch → ... → {conv_final_channels}ch (hidden_dim={sensor_hidden_dim})")
-
-                if sensor_transformer_dim is not None:
-                    print(f"   🔧 Mode: Conv({conv_final_channels}) → Projection({sensor_transformer_dim}) → Transformer({sensor_transformer_dim})")
-                    mode_name = "Lightweight" if sensor_hidden_dim < 512 else "Medium"
-                    print(f"   💡 {mode_name} mode")
-                else:
-                    print(f"   🔧 Mode: Conv({conv_final_channels}) → Transformer({conv_final_channels})")
-                    print(f"   💡 Heavy mode")
-
-                self.sensor_encoder = ForceAwareSensorEncoder(
-                    dist_channels=sensor_input_channels - 1, force_channels=1,
-                    temporal_length=sensor_temporal_length, dist_hidden_dim=sensor_hidden_dim,
-                    use_transformer=True, num_transformer_layers=1,
-                    transformer_dim=sensor_transformer_dim  # 경량화 옵션
-                ).to(dtype=torch.bfloat16, device="cuda")
-            else:
-                print("   센서 인코더 타입: 기본값")
-                print(f"   📊 Conv backbone: {sensor_input_channels}ch → ... → {conv_final_channels}ch (hidden_dim={sensor_hidden_dim})")
-
-                if sensor_transformer_dim is not None:
-                    print(f"   🔧 Mode: Conv({conv_final_channels}) → Projection({sensor_transformer_dim}) → Transformer({sensor_transformer_dim})")
-                    mode_name = "Lightweight" if sensor_hidden_dim < 512 else "Medium"
-                    print(f"   💡 {mode_name} mode")
-                else:
-                    print(f"   🔧 Mode: Conv({conv_final_channels}) → Transformer({conv_final_channels})")
-                    print(f"   💡 Heavy mode")
-
-                self.sensor_encoder = SensorEncoder(
-                    input_channels=sensor_input_channels, temporal_length=sensor_temporal_length,
-                    hidden_dim=sensor_hidden_dim, output_dim=sensor_output_dim,
-                    use_transformer=True, num_transformer_layers=2,
-                    transformer_dim=sensor_transformer_dim  # 경량화 옵션
-                ).to(dtype=torch.bfloat16, device="cuda")
+            print("   센서 인코더: UnifiedGatedSensorEncoder (bfloat16 ~53MB)")
+            self.sensor_encoder = UnifiedGatedSensorEncoder(
+                dist_channels=sensor_input_channels - 1,
+                force_channels=1,
+                temporal_length=sensor_temporal_length,
+                output_dim=sensor_output_dim
+            ).to(dtype=torch.bfloat16, device="cuda")
             force_bn_fp32_(self.sensor_encoder)
         else:
             self.sensor_encoder = None
 
         if self.robot_state_enabled:
+            print("   로봇 상태 인코더: Upgraded RobotStateEncoder (bfloat16 ~41MB)")
             self.robot_state_encoder = RobotStateEncoder(
-                input_dim=12, temporal_length=robot_state_temporal_length,
-                model_dim=512, output_dim=robot_state_output_dim, # 수정: robot_state_output_dim 사용
-                num_layers=4, num_heads=8, dropout=0.1
+                temporal_length=robot_state_temporal_length,
+                output_dim=robot_state_output_dim
             ).to(dtype=torch.bfloat16, device="cuda")
         else:
             self.robot_state_encoder = None
@@ -293,36 +194,17 @@ class QwenVLAUnified(nn.Module):
         if sensor_enabled:
             combined_sensor_dim += sensor_output_dim
         if self.robot_state_enabled:
-            combined_sensor_dim += robot_state_output_dim # 수정: robot_state_output_dim 더하기
+            combined_sensor_dim += robot_state_output_dim
 
-        # --- 특징 프로젝션 레이어 (차원 통일) ---
-        # V2 아키텍처에서는 ActionExpert 내부에서 프로젝션을 처리하므로 이 부분은 제거됩니다.
-        # self.vl_proj = nn.Linear(vl_hidden_size, hidden_dim)
-        # if self.sensor_enabled:
-        #     self.sensor_proj = nn.Linear(sensor_output_dim, hidden_dim)
-        # if self.robot_state_enabled:
-        #     self.robot_state_proj = nn.Linear(robot_state_output_dim, hidden_dim)
-
-        if model_type == 'diffusion':
-            raise ValueError("Diffusion 모델은 더 이상 사용되지 않습니다. 'flow_matching' 또는 'regression'을 사용해주십시오.")
-        elif model_type == 'flow_matching':
-            self.action_expert = FlowMatchingActionExpert(
-                image_feature_dim=vl_hidden_size,
-                text_guidance_dim=vl_hidden_size,
-                sensor_dim=combined_sensor_dim,
-                action_dim=action_dim,
-                horizon=horizon,
-                hidden_dim=hidden_dim,
-            ).to(dtype=torch.bfloat16, device="cuda")
-        else:  # regression
-            self.action_expert = RegressionActionExpert(
-                image_feature_dim=vl_hidden_size,
-                text_guidance_dim=vl_hidden_size,
-                sensor_dim=combined_sensor_dim,
-                action_dim=action_dim,
-                horizon=horizon,
-                hidden_dim=hidden_dim,
-            ).to(dtype=torch.bfloat16, device="cuda")
+        ActionExpertClass = FlowMatchingActionExpert if model_type == 'flow_matching' else RegressionActionExpert
+        self.action_expert = ActionExpertClass(
+            image_feature_dim=vl_hidden_size,
+            text_guidance_dim=vl_hidden_size,
+            sensor_dim=combined_sensor_dim,
+            action_dim=action_dim,
+            horizon=horizon,
+            hidden_dim=hidden_dim,
+        ).to(dtype=torch.bfloat16, device="cuda")
 
         print("✅ 모델 초기화 완료!")
 
@@ -584,14 +466,9 @@ class QwenVLAUnified(nn.Module):
                 raise RuntimeError("⚠️ 데이터로더 캐시와 신규 인코딩 후에도 VL 토큰이 완전히 준비되지 않았습니다.")
         else:
             if self.cache_only_mode:
-                # If cache is missing in cache_only_mode, return a zero loss for this batch
-                # This effectively skips the sample as requested by the user.
                 if actions is not None and self.training:
                     return torch.tensor(0.0, device=device, requires_grad=True), None, None
                 else:
-                    # In inference mode, we can't just return a zero loss.
-                    # We must return something of the correct shape.
-                    # Returning zeros is a reasonable fallback.
                     batch_size = len(text_inputs)
                     return torch.zeros(batch_size, self.horizon, self.action_dim, device=device), None, None
 
@@ -622,11 +499,10 @@ class QwenVLAUnified(nn.Module):
             else:
                 sensor_features_combined = sensor_tensors[0]
 
-        # V2 Cross-Attention은 3D 텐서(B, S, D)를 기대하므로, 캐시에서 온 2D 텐서를 3D로 변환
         if image_features is not None and image_features.dim() == 2:
-            image_features = image_features.unsqueeze(1) # [B, D] -> [B, 1, D]
+            image_features = image_features.unsqueeze(1)
 
-        # 4. 모델 타입에 따른 포워드 패스 (V2, Cross-Attention)
+        # 4. 모델 타입에 따른 포워드 패스
         if self.model_type == 'flow_matching':
             if actions is not None and self.training:
                 actions = actions.to(device=device, dtype=image_features.dtype)
@@ -683,12 +559,10 @@ class QwenVLAUnified(nn.Module):
             )
 
 if __name__ == "__main__":
-    print("🧪 Unified VLA 모델 V2 테스트 시작...")
+    print("🧪 Unified VLA 모델 V3 테스트 시작...")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"사용 가능한 장치: {device}")
 
-    # Flow Matching 모델 테스트
-    print("\n=== Flow Matching 모델 테스트 ===")
     try:
         model_flow_matching = QwenVLAUnified(
             model_type='flow_matching', sensor_enabled=True, robot_state_enabled=True,
@@ -710,7 +584,7 @@ if __name__ == "__main__":
             print("  ⚠️ 실제 이미지를 찾을 수 없어 빈 리스트로 테스트합니다.")
             image_inputs_dummy = [[], []]
 
-        sensor_data_dummy = torch.randn(batch_size, 650, 1026, device=device, dtype=torch.float32)
+        sensor_data_dummy = torch.randn(batch_size, 65, 1026, device=device, dtype=torch.float32)
         robot_states_dummy = torch.randn(batch_size, 100, 12, device=device, dtype=torch.float32)
         
         with torch.no_grad():
@@ -721,31 +595,7 @@ if __name__ == "__main__":
         print(f"✅ Flow Matching 모델 추론 성공. 출력 형태: {sampled_actions_flow.shape}")
         assert sampled_actions_flow.shape == (batch_size, horizon, action_dim)
     except Exception as e:
-        print(f"❌ Flow Matching 모델 추론 실패: {e}")
-        import traceback
-        traceback.print_exc()
-
-    # Regression 모델 테스트
-    print("\n=== Regression 모델 테스트 ===")
-    try:
-        model_regression = QwenVLAUnified(
-            model_type='regression', sensor_enabled=True, robot_state_enabled=True,
-            finetune_vl='none', cache_dir="./test_cache",
-        ).to(device)
-        model_regression.eval()
-
-        z_chunk_dummy = torch.randn(batch_size, horizon, action_dim, device=device, dtype=torch.float32)
-
-        with torch.no_grad():
-            pred_actions_reg, delta_reg = model_regression.forward(
-                text_inputs=text_inputs_dummy, image_inputs=image_inputs_dummy,
-                z_chunk=z_chunk_dummy, sensor_data=sensor_data_dummy, robot_states=robot_states_dummy,
-            )
-        print(f"✅ Regression 모델 추론 성공. 예측 행동 형태: {pred_actions_reg.shape}, 델타 형태: {delta_reg.shape}")
-        assert pred_actions_reg.shape == (batch_size, horizon, action_dim)
-        assert delta_reg.shape == (batch_size, horizon, action_dim)
-    except Exception as e:
-        print(f"❌ Regression 모델 추론 실패: {e}")
+        print(f"❌ 모델 테스트 실패: {e}")
         import traceback
         traceback.print_exc()
 
