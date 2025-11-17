@@ -377,15 +377,15 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
     CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --num_gpus=4 \
     TRAIN_FlowMatching.py \
     --deepspeed_config configs/deepspeed_zero2_offload.json \
-    --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset5/Eye_trocar" \
+    --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset6/*_point" \
     --batch_size 32 \
     --grad_accum 1 \
     --image_resize_height 360 \
     --image_resize_width 640 \
-    --epochs 10 \
-    --lr 3e-5 \
+    --epochs 50 \
+    --lr 1e-4 \
     --min_lr 1e-7 \
-    --finetune_vl full \
+    --finetune_vl none \
     --sensor_enabled \
     --sensor_hidden_dim 128 \
     --sensor_transformer_dim 256 \
@@ -393,7 +393,7 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
     --fusion_strategy "cross_attention" \
     --num_workers 16 \
     --skip_dataset_stats \
-    --resume "./checkpoints/backup/flow_matching_latest.pt"
+    --resume "./checkpoints/backup/flow_matching_best.pt"
 
 #    --load_robot_state_encoder_checkpoint "./checkpoints/robot_state_mae_best.pth" \
     # --load_sensor_encoder_checkpoint ./checkpoints/sensor_clip_latest.pth \
@@ -452,15 +452,17 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
 # echo "=============== FLOW MATCHING STAGE 2 COMPLETE ==============="
 # echo ""
 
-python3 evaluate_flowmatching_episode.py \
-    --episode-path /home/najo/NAS/VLA/dataset/New_dataset4/Eye_trocar/data_collection_20251115_012126 \
-    --checkpoint checkpoints/flow_matching_best.pt \
-    --output evaluation_results/data_collection_20251115_012126_eval.json \
+CUDA_VISIBLE_DEVICES=3 python3 evaluate_flowmatching_episode.py \
+    --episode-path /home/najo/NAS/VLA/dataset/New_dataset4/Eye_trocar/data_collection_20251115_002703 \
+    --checkpoint /home/najo/NAS/VLA/Insertion_VLAv3/checkpoints/backup/flow_matching_best.pt \
+    --output evaluation_results/data_collection_eval.json \
     --sensor-hidden-dim 128 \
     --sensor-transformer-dim 256 \
     --batch-size 4 \
-    --num-workers 0 \
-    --cache-only-mode
+    --num-workers 0
+
+python evaluation_results/plot_first_delta_action.py \
+    --results-json /home/najo/NAS/VLA/Insertion_VLAv3/evaluation_results/data_collection_eval.json
 
 # echo "✅✅✅ VLA FULL TRAINING PIPELINE FINISHED ✅✅✅"
 

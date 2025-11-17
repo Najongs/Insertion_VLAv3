@@ -1,5 +1,10 @@
 """
-python create_metadata_files.py dataset_root /home/najo/NAS/VLA/dataset/New_dataset5/Eye_trocar
+python create_metadata_files.py /home/najo/NAS/VLA/dataset/New_dataset6/Red_point
+python create_metadata_files.py /home/najo/NAS/VLA/dataset/New_dataset6/Green_point
+python create_metadata_files.py /home/najo/NAS/VLA/dataset/New_dataset6/Blue_point
+python create_metadata_files.py /home/najo/NAS/VLA/dataset/New_dataset6/White_point
+python create_metadata_files.py /home/najo/NAS/VLA/dataset/New_dataset6/Yellow_point
+
 """
 
 import json

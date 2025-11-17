@@ -21,7 +21,7 @@ Data Sources:
 
 Usage:
     # Standard async inference (recommended)
-    python Async_inference_receiver.py --checkpoint /home/najo/NAS/VLA/Insertion_VLAv3/checkpoints/backup/flow_matching_best.pt --auto-start --vl-reuse 2 --task-name Eye_trocar
+    python Async_inference_receiver.py --checkpoint /home/najo/NAS/VLA/Insertion_VLAv3/checkpoints/flow_matching_best.pt --auto-start --vl-reuse 6 --task-name Red_point --action-queue-steps 1
 
     # Save data for debugging
     python Async_inference_receiver.py --checkpoint checkpoints/qwen_vla_sensor_best.pt --save-data
@@ -252,17 +252,23 @@ class Config:
     SENSOR_ENABLED = True
     SENSOR_TEMPORAL_LENGTH = 65  # 100ms at 650Hz (was 650)
     SENSOR_INPUT_CHANNELS = 1026  # 1 force + 1025 A-scan
+    SENSOR_HIDDEN_DIM = 128  # Match training-time lightweight sensor encoder
+    SENSOR_TRANSFORMER_DIM = 256  # Match training-time projection dim
 
     # 🔥 NEW: Robot state settings
     ROBOT_STATE_ENABLED = True
     ROBOT_STATE_DIM = 12  # 6 joints + 6 poses
     ROBOT_STATE_BUFFER_LENGTH = 100  # 100 samples @ 100Hz = 1 second window
 
-    FUSION_STRATEGY = 'concat'
+    FUSION_STRATEGY = 'cross_attention'
 
     # Flow matching settings
     FLOW_STEPS = 10  # ODE integration steps for flow matching
     FLOW_SOLVER = 'euler'  # 'euler' or 'rk4'
+
+    # View aggregation (match training defaults)
+    VIEW_AGGREGATION = 'weighted_mean'
+    VIEW5_WEIGHT = 2.0
 
     # Network settings
     ZMQ_CAM_PULL_PORT = 5555
@@ -299,7 +305,10 @@ class Config:
 
     # 🔥 OPTIMIZED: Async inference settings
     ACTION_EXPERT_HZ = 10.0  # Action Expert runs at 10Hz
-    VLM_REUSE_COUNT = 4  # Reuse VL features 4 times (VLM updates every 400ms)
+    VLM_REUSE_COUNT = 2  # Reuse VL features twice (fresh VL features every 200ms)
+    ACTION_QUEUE_STEPS = 2  # Number of horizon steps buffered locally
+    ACTION_QUEUE_REFILL_THRESHOLD = 1  # Trigger inference when queue length <= threshold
+    CLEAR_QUEUE_ON_NEW_RESULT = True
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Logging settings
@@ -417,17 +426,19 @@ class RobotStateCircularBuffer:
         self.lock = threading.Lock()
         self.save_buffer = save_buffer  # Optional: list to save all data
 
-    def add_state(self, joints, pose, timestamp):
+    def add_state(self, joints, pose, timestamp, recv_timestamp=None):
         """Add single robot state (6 joints + 6 pose)"""
         with self.lock:
             # Combine joints + pose into (12,) vector
             state = np.concatenate([joints, pose], dtype=np.float32)
-            self.buffer.append((state, timestamp))
+            recency_ts = recv_timestamp if recv_timestamp is not None else time.time()
+            self.buffer.append((state, recency_ts))
 
             # Save to permanent buffer if enabled
             if self.save_buffer is not None:
                 self.save_buffer.append({
                     'timestamp': timestamp,
+                    'recv_timestamp': recency_ts,
                     'joints': joints.copy(),
                     'pose': pose.copy()
                 })
@@ -500,13 +511,15 @@ class SensorCircularBuffer:
                 aline = sample['aline'].astype(np.float32)
                 combined = np.concatenate([force, aline])  # (1026,)
                 # Store with timestamp for freshness check
-                self.buffer.append((combined, sample['timestamp']))
+                recency_ts = sample.get('recv_timestamp', time.time())
+                self.buffer.append((combined, recency_ts))
 
                 # Save to permanent buffer if enabled
                 if self.save_buffer is not None:
                     self.save_buffer.append({
                         'timestamp': sample['timestamp'],
                         'send_timestamp': sample['send_timestamp'],
+                        'recv_timestamp': recency_ts,
                         'force': sample['force'],
                         'aline': sample['aline']
                     })
@@ -575,25 +588,29 @@ class AsyncVLAInferenceEngine:
         self.task_name = task_name
 
         # Generate instruction prompt (same format as training dataset)
-        self.text_prompt = (f"""Respond ONLY with the next action.
+        self.text_prompt = (f"""
 Environment Context:
-- This is a Meca500 robot workspace.
-- The end-effector holds a needle; the needle tip is the tool.
+- This is a Meca500 robot.
+- The end-effector made by 3d pinter the needle tip have to contact with {task_name}.
 - The scene is an optical table with many holes, but these are NOT targets.
 - The ONLY true insertion target is the {task_name}.
 
 Task:
-You must analyze the five camera views and determine the needle’s relative position to the {task_name}.
+You must analyze the views and determine the needle’s relative position to the {task_name}.
 Identify:
 1) needle tip location
 2) alignment relative to the {task_name} center
 3) required direction to align for insertion
+4) If the needle tip is inserted at the {task_name}, it is Done of task
+additional infomation - An eye trocar is a small silver hole in a silicone eye model phantom 
+
+(explain little bit briefly)
 
 Respond with:
 - target visibility
 - needle alignment
 - required adjustment direction
-- insertion readiness (yes/no)
+- distance with {task_name} and needle tip point
 """
         )
 
@@ -609,8 +626,10 @@ Respond with:
         print(f"Sensor Window: {config.SENSOR_TEMPORAL_LENGTH} samples (100ms @ 650Hz)")
         print(f"Robot State: {config.ROBOT_STATE_ENABLED}")
         print(f"Action Expert: {config.ACTION_EXPERT_HZ} Hz")
+        print(f"Action Queue: {config.ACTION_QUEUE_STEPS} steps (refill <= {config.ACTION_QUEUE_REFILL_THRESHOLD})")
         print(f"VL Reuse: {config.VLM_REUSE_COUNT}x")
         print(f"Fusion Strategy: {config.FUSION_STRATEGY}")
+        print(f"View Aggregation: {config.VIEW_AGGREGATION} (View5 weight={config.VIEW5_WEIGHT})")
         if config.MODEL_TYPE == 'flow_matching':
             print(f"Flow Steps: {config.FLOW_STEPS}, Solver: {config.FLOW_SOLVER}")
 
@@ -628,17 +647,20 @@ Respond with:
             sensor_encoder_type='force_aware',  # ✅ Match training script
             sensor_input_channels=config.SENSOR_INPUT_CHANNELS,
             sensor_temporal_length=config.SENSOR_TEMPORAL_LENGTH,
+            sensor_hidden_dim=getattr(config, 'SENSOR_HIDDEN_DIM', 512),
             sensor_output_dim=1024,  # ✅ Must match training script! (was 2048)
+            sensor_transformer_dim=getattr(config, 'SENSOR_TRANSFORMER_DIM', None),
             robot_state_enabled=config.ROBOT_STATE_ENABLED,
             robot_state_temporal_length=config.ROBOT_STATE_BUFFER_LENGTH,  # 100 samples @ 100Hz
-            robot_state_output_dim=512,  # ✅ Match training script
+            robot_state_output_dim=1024,  # ✅ Match training script
             image_resize_height=config.IMAGE_RESIZE_HEIGHT,
             image_resize_width=config.IMAGE_RESIZE_WIDTH,
             flow_steps=config.FLOW_STEPS if config.MODEL_TYPE == 'flow_matching' else 10,
             flow_solver=config.FLOW_SOLVER if config.MODEL_TYPE == 'flow_matching' else 'euler',
-            # VL optimization: Parallel view encoding for 2-3x faster VL updates
-            parallel_view_encoding=True,  # 🚀 Enable multi-view parallel encoding
-            view_aggregation='mean',      # Aggregate multiple views
+            # Match training pipeline: sequential multi-view encoding
+            parallel_view_encoding=False,
+            view_aggregation=config.VIEW_AGGREGATION,  # Match training behavior
+            view5_weight=config.VIEW5_WEIGHT,
             device_map="cuda",  # Use single GPU for inference instead of "auto"
         )
 
@@ -1005,7 +1027,8 @@ class SensorUDPReceiver(threading.Thread):
                     'timestamp': ts,
                     'send_timestamp': send_ts,
                     'force': force,
-                    'aline': aline
+                    'aline': aline,
+                    'recv_timestamp': recv_time
                 }
 
                 # 6. 클럭 동기화 로직 (유지)
@@ -1107,14 +1130,15 @@ def main():
     parser = argparse.ArgumentParser(description='Async Real-time VLA Inference Receiver')
     parser.add_argument('--checkpoint', type=str, required=True, help='Model checkpoint path')
     parser.add_argument('--save-data', action='store_true', help='Save images, sensor data, robot state')
-    parser.add_argument('--vl-reuse', type=int, default=4, help='VL feature reuse count (default: 4)')
+    parser.add_argument('--vl-reuse', type=int, default=2, help='VL feature reuse count (default: 2)')
     parser.add_argument('--model-type', type=str, default='flow_matching', choices=['flow_matching', 'regression'], help='Model type: flow_matching or regression (default: flow_matching)')
     parser.add_argument('--flow-steps', type=int, default=10, help='ODE integration steps for flow matching (default: 10)')
+    parser.add_argument('--action-queue-steps', type=int, default=2, help='Number of predicted steps to buffer locally (default: 2)')
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging for debugging.")
     parser.add_argument('--robot-ip', type=str, default='10.130.41.111', help='IP address of the robot state publisher (robot_command_receiver.py).')
     parser.add_argument('--auto-start', action='store_true', help='Automatically send START command to robot before inference')
-    parser.add_argument('--start-joints', type=float, nargs=6, default=[130.0, 70.0, 265.0, -150.0, 25.0, 105.0], help='Start joint positions for auto-start (default: [0,0,0,0,0,0])')
-                        #168.387659, 36.190885, 250.816119, 178.747768, 19.072951, 144.28431 # [169.055308, -22.135383, 232.007663, 177.66655, 19.996871, 144.314525],
+    parser.add_argument('--start-joints', type=float, nargs=6, default=[190, 1, 308, 0, 90, 0], help='Start joint positions for auto-start (default: [0,0,0,0,0,0])')
+                        #168.387659, 36.190885, 250.816119, 178.747768, 19.072951, 144.28431 # [169.055308, -22.135383, 232.007663, 177.66655, 19.996871, 144.314525], EYE 중요 130.0, 70.0, 265.0, -150.0, 25.0, 105.0
     parser.add_argument('--task-name', type=str, default='eye', help='Task name for prompt generation (e.g., eye, yellow_point, blue_point)')
     args = parser.parse_args()
 
@@ -1124,6 +1148,11 @@ def main():
     config.VLM_REUSE_COUNT = args.vl_reuse
     config.MODEL_TYPE = args.model_type
     config.FLOW_STEPS = args.flow_steps
+    config.ACTION_QUEUE_STEPS = max(1, min(args.action_queue_steps, config.HORIZON))
+    config.ACTION_QUEUE_REFILL_THRESHOLD = min(
+        config.ACTION_QUEUE_REFILL_THRESHOLD,
+        max(0, config.ACTION_QUEUE_STEPS - 1)
+    )
 
     # Setup output directory
     session_time = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1236,9 +1265,12 @@ def main():
     current_vl_update_number = 0
 
     # Action prediction tracking
-    last_action_time = time.time()
     action_period = 1.0 / config.ACTION_EXPERT_HZ  # 0.1s for 10Hz
+    last_action_time = time.time() - action_period  # allow immediate first action
+    last_inference_time = time.time() - action_period
     last_status_print = time.time()
+    action_queue = deque(maxlen=config.HORIZON)
+    last_data_wait_log = 0.0
 
     # Auto-start flag
     start_command_sent = False
@@ -1261,7 +1293,9 @@ def main():
     if config.MODEL_TYPE == 'flow_matching':
         print(f"Flow Steps: {config.FLOW_STEPS} (Solver: {config.FLOW_SOLVER})")
     print(f"Action Expert: {config.ACTION_EXPERT_HZ} Hz (every {action_period*1000:.0f}ms)")
-    print(f"VL Update: ~2.6 Hz (VL features reused {config.VLM_REUSE_COUNT}x)")
+    print(f"Action Queue: {config.ACTION_QUEUE_STEPS} steps buffered (refill <= {config.ACTION_QUEUE_REFILL_THRESHOLD})")
+    vl_update_rate = config.ACTION_EXPERT_HZ / max(1.0, config.VLM_REUSE_COUNT)
+    print(f"VL Update: ~{vl_update_rate:.1f} Hz (VL features reused {config.VLM_REUSE_COUNT}x)")
     print(f"Image Resolution: {config.IMAGE_RESIZE_WIDTH}x{config.IMAGE_RESIZE_HEIGHT}")
     print(f"Sensor Window: {config.SENSOR_TEMPORAL_LENGTH} samples (100ms @ 650Hz)")
     print(f"Robot State: ENABLED ({config.ROBOT_STATE_BUFFER_LENGTH} samples @ 100Hz, 12 dims: 6 joints + 6 poses)")
@@ -1361,7 +1395,7 @@ def main():
                         }
 
                         # Add to robot state buffer for model input
-                        robot_state_buffer.add_state(joints, pose, origin_ts)
+                        robot_state_buffer.add_state(joints, pose, origin_ts, recv_timestamp=now)
                         last_robot_recv_time = now
 
                         # Save robot data if enabled
@@ -1399,23 +1433,61 @@ def main():
                         vl_update_thread = threading.Thread(target=vl_update_worker, daemon=True)
                         vl_update_thread.start()
 
-            # === ACTION EXPERT PREDICTION (10Hz) ===
+            # === ACTION DISPATCH LOOP (10Hz target) ===
             time_since_last_action = now - last_action_time
-
             if time_since_last_action >= action_period:
-                # Check if all data sources are ready AND fresh (not stale)
-                sensor_fresh = sensor_buffer.is_fresh(max_age_sec=1.0)
-                robot_fresh = robot_state_buffer.is_fresh(max_age_sec=1.0)
+                if action_queue:
+                    queued_item = action_queue.popleft()
+                    action_to_send = queued_item['action']
+                    delta_pose = action_to_send[:6].tolist()
+                    gripper = action_to_send[6]
+                    robot_cmd = {
+                        "cmd": "dpose",
+                        "dp": delta_pose
+                    }
 
-                data_ready = (
-                    inference_engine.vl_image_features is not None and
-                    inference_engine.vl_guidance_vectors is not None and
-                    sensor_buffer.is_ready() and sensor_fresh and
-                    robot_state_buffer.is_ready() and robot_fresh
-                )
+                    inference_idx = queued_item['inference_index']
+                    step_idx = queued_item['step_idx']
 
+                    if not args.verbose:
+                        print(f"[ACTION] From inference #{inference_idx} step {step_idx}/{config.HORIZON} | queue={len(action_queue)}")
+                        print(f"         dpose: [x:{delta_pose[0]:+.4f}, y:{delta_pose[1]:+.4f}, z:{delta_pose[2]:+.4f}, a:{delta_pose[3]:+.4f}, b:{delta_pose[4]:+.4f}, r:{delta_pose[5]:+.4f}] | gripper:{gripper:.3f}")
+                    else:
+                        print(f"[ACTION] in#{inference_idx} step{step_idx}: {delta_pose} grip:{gripper:.3f}")
+
+                    try:
+                        cmd_sock.send_json(robot_cmd, zmq.DONTWAIT)
+                        action_send_success += 1
+                        last_action_time = now
+                        if args.verbose:
+                            print(f"[ACTION] ✅ Command sent successfully")
+                    except zmq.Again:
+                        action_send_failed += 1
+                        print(f"⚠️ [ACTION] Robot command socket busy, command dropped. (Failed: {action_send_failed})")
+                    except Exception as e:
+                        action_send_failed += 1
+                        print(f"💥 [ACTION] Error sending robot command: {e} (Failed: {action_send_failed})")
+                else:
+                    if now - last_data_wait_log >= 2.0:
+                        print(f"[WAIT] Action queue empty — waiting for new inference result.")
+                        last_data_wait_log = now
+
+            # === ACTION QUEUE REFILL (runs when queue below threshold) ===
+            sensor_fresh = sensor_buffer.is_fresh(max_age_sec=1.0)
+            robot_fresh = robot_state_buffer.is_fresh(max_age_sec=1.0)
+            data_ready = (
+                inference_engine.vl_image_features is not None and
+                inference_engine.vl_guidance_vectors is not None and
+                sensor_buffer.is_ready() and sensor_fresh and
+                robot_state_buffer.is_ready() and robot_fresh
+            )
+            need_refill = len(action_queue) <= config.ACTION_QUEUE_REFILL_THRESHOLD
+            time_since_last_inference = now - last_inference_time
+            should_run_inference = data_ready and (need_refill or time_since_last_inference >= action_period)
+
+            if should_run_inference:
+                last_inference_time = now
                 if data_ready:
-                    # Send START command once if auto-start is enabled
                     if args.auto_start and not start_command_sent:
                         print(f"\n🚀 Sending AUTO-START command to robot...")
                         start_cmd = {
@@ -1427,21 +1499,18 @@ def main():
                             cmd_sock.send_json(start_cmd, zmq.DONTWAIT)
                             print(f"✅ START command sent: {start_cmd}")
                             start_command_sent = True
-                            time.sleep(0.5)  # Give robot time to process start command
+                            time.sleep(0.5)
                         except zmq.Again:
                             print("⚠️ Failed to send START command (socket busy)")
                         except Exception as e:
                             print(f"❌ Error sending START command: {e}")
 
-                    if args.verbose:
-                        print(f"[INFER] Preparing to run inference #{len(inference_results) + 1}...")
-                    # Get sensor data
                     sensor_tensor = sensor_buffer.get_tensor()
-
-                    # Get robot state data
                     robot_tensor = robot_state_buffer.get_tensor()
 
-                    # Predict action (fast, ~20-30ms with flow matching)
+                    if args.verbose:
+                        print(f"[INFER] Running inference #{len(inference_results) + 1} (queue={len(action_queue)})")
+
                     result = inference_engine.predict_action(
                         sensor_data=sensor_tensor,
                         robot_states=robot_tensor,
@@ -1453,9 +1522,6 @@ def main():
                     if result:
                         vl_update_counter += 1
 
-                        # Log action prediction (moved below to show action values)
-
-                        # Save result
                         inference_results.append({
                             'timestamp': result['timestamp'],
                             'actions': result['actions'],
@@ -1469,54 +1535,34 @@ def main():
                             } if robot_state else None
                         })
 
-                        # === SEND ACTION TO ROBOT CONTROLLER ===
-                        # Use the first action from the horizon
-                        action_to_send = result['actions'][0]
-
-                        # The model outputs 7D action (6-DoF + gripper)
-                        # We send the 6-DoF delta pose to the robot receiver
-                        delta_pose = action_to_send[:6].tolist()
-                        gripper = action_to_send[6]
-
-                        # Format the command
-                        robot_cmd = {
-                            "cmd": "dpose",
-                            "dp": delta_pose
-                        }
-
-                        # Display action being sent
-                        if not args.verbose:
-                            print(f"[INFER] Action #{len(inference_results)} | VL_reuse={vl_update_counter}/{config.VLM_REUSE_COUNT} | Time: {result['inference_time']*1000:.1f}ms")
-                            print(f"[ACTION] dpose: [x:{delta_pose[0]:+.4f}, y:{delta_pose[1]:+.4f}, z:{delta_pose[2]:+.4f}, a:{delta_pose[3]:+.4f}, b:{delta_pose[4]:+.4f}, r:{delta_pose[5]:+.4f}] | gripper:{gripper:.3f}")
+                        inference_idx = len(inference_results)
+                        queued_steps = min(config.ACTION_QUEUE_STEPS, result['actions'].shape[0])
+                        if queued_steps > 0:
+                            if config.CLEAR_QUEUE_ON_NEW_RESULT:
+                                action_queue.clear()
+                            for step in range(queued_steps):
+                                action_queue.append({
+                                    'action': result['actions'][step],
+                                    'inference_index': inference_idx,
+                                    'step_idx': step + 1
+                                })
+                            if not args.verbose:
+                                print(f"[INFER] #{inference_idx} | VL_reuse={vl_update_counter}/{config.VLM_REUSE_COUNT} | Time: {result['inference_time']*1000:.1f}ms | queued {queued_steps}")
+                            else:
+                                print(f"[QUEUE] Added {queued_steps} actions from inference #{inference_idx} (queue size: {len(action_queue)})")
                         else:
-                            print(f"[ACTION] 7D Action: [x:{delta_pose[0]:+.4f}, y:{delta_pose[1]:+.4f}, z:{delta_pose[2]:+.4f}, a:{delta_pose[3]:+.4f}, b:{delta_pose[4]:+.4f}, r:{delta_pose[5]:+.4f}, grip:{gripper:.3f}]")
+                            print("⚠️ [QUEUE] Model returned no actions.")
+                        last_data_wait_log = now
+            elif not data_ready and (now - last_data_wait_log >= 2.0):
+                sensor_age = time.time() - sensor_buffer.get_latest_timestamp() if sensor_buffer.get_latest_timestamp() > 0 else 999
+                robot_age = time.time() - robot_state_buffer.get_latest_timestamp() if robot_state_buffer.get_latest_timestamp() > 0 else 999
 
-                        try:
-                            cmd_sock.send_json(robot_cmd, zmq.DONTWAIT)
-                            action_send_success += 1
-                            if args.verbose:
-                                print(f"[ACTION] ✅ Command sent successfully")
-                        except zmq.Again:
-                            action_send_failed += 1
-                            print(f"⚠️ [ACTION] Robot command socket busy, command dropped. (Failed: {action_send_failed})")
-                        except Exception as e:
-                            action_send_failed += 1
-                            print(f"💥 [ACTION] Error sending robot command: {e} (Failed: {action_send_failed})")
-
-                    last_action_time = now
-
-                else:
-                    # Data not ready - show why
-                    if time_since_last_action >= 2.0:  # Print warning every 2s
-                        sensor_age = time.time() - sensor_buffer.get_latest_timestamp() if sensor_buffer.get_latest_timestamp() > 0 else 999
-                        robot_age = time.time() - robot_state_buffer.get_latest_timestamp() if robot_state_buffer.get_latest_timestamp() > 0 else 999
-
-                        print(f"[WAIT] Waiting for fresh data:")
-                        print(f"  VL Features: {inference_engine.vl_image_features is not None and inference_engine.vl_guidance_vectors is not None}")
-                        print(f"  Images: {image_buffer.is_ready()} ({len(image_buffer.latest_images)}/5)")
-                        print(f"  Sensor: ready={sensor_buffer.is_ready()}, fresh={sensor_fresh} ({sensor_buffer.size()}/{config.SENSOR_TEMPORAL_LENGTH}, age={sensor_age:.1f}s)")
-                        print(f"  Robot: ready={robot_state_buffer.is_ready()}, fresh={robot_fresh} ({robot_state_buffer.size()}/{config.ROBOT_STATE_BUFFER_LENGTH}, age={robot_age:.1f}s)")
-                        last_action_time = now
+                print(f"[WAIT] Waiting for fresh data:")
+                print(f"  VL Features: {inference_engine.vl_image_features is not None and inference_engine.vl_guidance_vectors is not None}")
+                print(f"  Images: {image_buffer.is_ready()} ({len(image_buffer.latest_images)}/5)")
+                print(f"  Sensor: ready={sensor_buffer.is_ready()}, fresh={sensor_fresh} ({sensor_buffer.size()}/{config.SENSOR_TEMPORAL_LENGTH}, age={sensor_age:.1f}s)")
+                print(f"  Robot: ready={robot_state_buffer.is_ready()}, fresh={robot_fresh} ({robot_state_buffer.size()}/{config.ROBOT_STATE_BUFFER_LENGTH}, age={robot_age:.1f}s)")
+                last_data_wait_log = now
 
             # Status print
             if now - last_status_print >= config.STATUS_PERIOD:
@@ -1526,6 +1572,7 @@ def main():
                 print(f"VL Updates: {stats['vl_update_count']} | VL avg: {stats['vl_avg_time_ms']:.0f}ms")
                 print(f"Actions: {stats['action_count']} | Action avg: {stats['action_avg_time_ms']:.1f}ms")
                 print(f"Actions Sent: {action_send_success} | Failed: {action_send_failed} | Success Rate: {100*action_send_success/(action_send_success+action_send_failed) if (action_send_success+action_send_failed)>0 else 0:.1f}%")
+                print(f"Action Queue: {len(action_queue)} pending (buffer {config.ACTION_QUEUE_STEPS})")
 
                 # Data freshness check
                 camera_stale = (now - last_camera_recv_time) > 1.0 if last_camera_recv_time > 0 else True

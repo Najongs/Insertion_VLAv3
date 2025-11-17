@@ -4,7 +4,7 @@ Convert robot_states.csv to robot_states.npz for faster loading
 
 Usage:
     python convert_robot_states_to_npz.py <dataset_dir>
-    python convert_robot_states_to_npz.py /home/najo/NAS/VLA/dataset/New_dataset5/Eye_trocar  # Convert all episodes
+    python convert_robot_states_to_npz.py /home/najo/NAS/VLA/dataset/New_dataset6  # Convert all episodes
 """
 
 import os
