@@ -107,15 +107,15 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
     --new_dataset_paths "${DATASET_PATHS_ALL[@]}" \
     --cache_root "$CACHE_ROOT" \
     --checkpoint_dir "$CHECKPOINT_DIR" \
-    --epochs 50 \
+    --epochs 25 \
     --batch_size 64 \
     --num_workers 8 \
     --learning_rate 2e-4 \
     --embedding_dim 512 \
-    --gate_loss_weight 0.25 \
-    --contact_threshold 0.85
-
-    # --resume "/home/najo/NAS/VLA/Insertion_VLAv3/checkpoints/sensor_clip_best.pth"
+    --gate_loss_weight 0.2 \
+    --contact_threshold 0.85 \
+    --resume_from "/home/najo/NAS/VLA/Insertion_VLAv3/checkpoints/sensor_clip_latest.pth" \
+    --sensor_noise_std 0.02
 
 echo "=============== Sensor Encoder Pre-training Complete ==============="
 echo ""

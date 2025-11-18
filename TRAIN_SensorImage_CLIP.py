@@ -322,6 +322,41 @@ class CLIPModel(nn.Module):
 
         return sensor_embedding, fused_vlm, gate_logit
 
+
+# =====================================
+# 2.5 Sensor Data Augmentation
+# =====================================
+
+class SensorNoiseAugmentation(Dataset):
+    """
+    A wrapper dataset that applies Gaussian noise to the sensor_data tensor.
+    This should only be used for the training dataset.
+    """
+    def __init__(self, subset, noise_std: float = 0.01):
+        self.subset = subset
+        self.noise_std = noise_std
+        if self.noise_std <= 0:
+            # Using print directly as this is inside a DDP-spawned process
+            # where logging might not be configured yet.
+            import os
+            if os.environ.get("LOCAL_RANK", "0") == "0":
+                print(f"⚠️  SensorNoiseAugmentation created with noise_std <= 0. No noise will be added.")
+
+    def __getitem__(self, idx):
+        data = self.subset[idx]
+        if self.noise_std > 0:
+            # The collate_fn handles tensor conversion, but we ensure it's a tensor for noise addition
+            sensor_tensor = data["sensor_data"]
+            if not isinstance(sensor_tensor, torch.Tensor):
+                sensor_tensor = torch.from_numpy(sensor_tensor)
+
+            noise = torch.randn_like(sensor_tensor) * self.noise_std
+            data["sensor_data"] = sensor_tensor + noise
+        return data
+
+    def __len__(self):
+        return len(self.subset)
+
 # =====================================
 # 3. Loss Functions
 # =====================================
@@ -375,7 +410,13 @@ def main(args):
 
     model = DDP(model, device_ids=[local_rank], find_unused_parameters=True)
 
+    # logit_scale is the learnable temperature parameter for the contrastive loss
+    logit_scale = nn.Parameter(torch.tensor(math.log(1 / 0.07), device=device))
+
+    # Initialize optimizer with model parameters first, then add logit_scale as a separate group.
+    # This is a workaround for a potential torch.compile issue with mixed parameter lists.
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=0.01)
+    optimizer.add_param_group({'params': [logit_scale], 'lr': args.learning_rate, 'weight_decay': 0.01})
     
     # Dataset
     unified_dataset = create_unified_dataloader(
@@ -412,11 +453,16 @@ def main(args):
     # Split and create DataLoaders
     val_size = int(len(full_dataset) * args.val_split)
     train_size = len(full_dataset) - val_size
-    train_dataset, val_dataset = torch.utils.data.random_split(full_dataset, [train_size, val_size])
+    train_subset, val_subset = torch.utils.data.random_split(full_dataset, [train_size, val_size])
 
-    train_sampler = DistributedSampler(train_dataset, shuffle=True)
+    # Apply noise augmentation only to the training set
+    train_augmented_dataset = SensorNoiseAugmentation(train_subset, noise_std=args.sensor_noise_std)
+    if is_main_process:
+        print(f"✓ Applying sensor noise augmentation to training set with std: {args.sensor_noise_std}")
+
+    train_sampler = DistributedSampler(train_augmented_dataset, shuffle=True)
     train_loader = DataLoader(
-        train_dataset,
+        train_augmented_dataset,
         batch_size=args.batch_size,
         sampler=train_sampler,
         num_workers=args.num_workers,
@@ -424,9 +470,9 @@ def main(args):
         collate_fn=clip_collate_fn
     )
 
-    val_sampler = DistributedSampler(val_dataset, shuffle=False)
+    val_sampler = DistributedSampler(val_subset, shuffle=False)
     val_loader = DataLoader(
-        val_dataset,
+        val_subset, # Use the original validation subset
         batch_size=args.batch_size * 2,
         sampler=val_sampler,
         num_workers=args.num_workers,
@@ -437,7 +483,6 @@ def main(args):
     # Scheduler and Loss
     scheduler = CosineAnnealingLR(optimizer, T_max=len(train_loader) * args.epochs, eta_min=1e-7)
     gate_criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight_tensor)
-    logit_scale = nn.Parameter(torch.tensor(math.log(1 / 0.07))).to(device)
 
     start_epoch = 0
     global_step = 0
@@ -445,21 +490,20 @@ def main(args):
 
     if args.resume_from and Path(args.resume_from).exists():
         if is_main_process:
-            print(f"Resuming training from checkpoint: {args.resume_from}")
+            print(f"Loading weights from checkpoint: {args.resume_from}")
         
         checkpoint = torch.load(args.resume_from, map_location=device)
         
+        # Load model weights and logit_scale, but re-initialize optimizer and scheduler
         model.module.load_state_dict(checkpoint['model_state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-        logit_scale.data = checkpoint['logit_scale']
         
-        start_epoch = checkpoint['epoch'] + 1
-        global_step = checkpoint.get('global_step', 0)
-        best_val_loss = checkpoint.get('best_val_loss', float('inf'))
+        if 'logit_scale' in checkpoint:
+            logit_scale.data = checkpoint['logit_scale']
         
         if is_main_process:
-            print(f"✓ Resumed from epoch {checkpoint['epoch']}. Starting next epoch at {start_epoch}.")
+            print(f"✓ Loaded model weights from {args.resume_from}. Starting training from scratch.")
+        
+        # Note: start_epoch, global_step, and best_val_loss are NOT restored to start fresh.
     else:
         if args.resume_from:
             if is_main_process:
@@ -502,11 +546,15 @@ def main(args):
                 sensor_emb, vlm_emb, gate_logit = model(sensor_data, vision_features, text_features, is_embedded)
                 
                 clip_loss = siglip_loss(sensor_emb, vlm_emb, logit_scale.exp())
+                
+                # Use BCEWithLogitsLoss for numerical stability
                 gate_loss = gate_criterion(gate_logit, contact_labels)
+
                 total_loss = clip_loss + args.gate_loss_weight * gate_loss
 
             optimizer.zero_grad()
             total_loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
             scheduler.step()
 
@@ -514,12 +562,21 @@ def main(args):
 
             if is_main_process:
                 current_lr = optimizer.param_groups[0]['lr']
-                pbar.set_postfix(loss=total_loss.item(), clip=clip_loss.item(), gate=gate_loss.item(), lr=f"{current_lr:.2e}")
+                
+                # Calculate gate accuracy for logging
+                with torch.no_grad():
+                    gate_prob = torch.sigmoid(gate_logit) # Convert logit to probability for accuracy calculation
+                    gate_pred = (gate_prob > 0.5).float()
+                    binary_labels = (contact_labels > 0.5).float()
+                    gate_acc = (gate_pred == binary_labels).float().mean()
+
+                pbar.set_postfix(loss=total_loss.item(), clip=clip_loss.item(), gate=gate_loss.item(), gate_acc=gate_acc.item(), lr=f"{current_lr:.2e}")
 
                 wandb.log({
                     "train/loss": total_loss.item(),
                     "train/clip_loss": clip_loss.item(),
                     "train/gate_loss": gate_loss.item(),
+                    "train/gate_acc": gate_acc.item(),
                     "train/lr": current_lr,
                     "global_step": global_step,
                     "epoch": epoch + 1
@@ -527,7 +584,7 @@ def main(args):
 
         # Validation Loop
         model.eval()
-        total_val_loss, total_val_clip_loss, total_val_gate_loss = 0, 0, 0
+        total_val_loss, total_val_clip_loss, total_val_gate_loss, total_val_gate_acc = 0, 0, 0, 0
         with torch.no_grad():
             for batch in val_loader:
                 sensor_data = batch["sensor_data"].to(device, dtype=torch.bfloat16)
@@ -539,24 +596,36 @@ def main(args):
                 with torch.cuda.amp.autocast(dtype=torch.bfloat16):
                     sensor_emb, vlm_emb, gate_logit = model(sensor_data, vision_features, text_features, is_embedded)
                     clip_loss = siglip_loss(sensor_emb, vlm_emb, logit_scale.exp())
+                    
+                    # Use BCEWithLogitsLoss for numerical stability
                     gate_loss = gate_criterion(gate_logit, contact_labels)
+
                     total_loss = clip_loss + args.gate_loss_weight * gate_loss
+
+                gate_prob = torch.sigmoid(gate_logit) # Convert logit to probability for accuracy calculation
+                gate_pred = (gate_prob > 0.5).float()
+                binary_labels = (contact_labels > 0.5).float()
+                gate_acc = (gate_pred == binary_labels).float().mean()
                 
                 total_val_loss += total_loss.item()
                 total_val_clip_loss += clip_loss.item()
                 total_val_gate_loss += gate_loss.item()
+                total_val_gate_acc += gate_acc.item()
         
         avg_val_loss = total_val_loss / len(val_loader)
         avg_val_clip_loss = total_val_clip_loss / len(val_loader)
         avg_val_gate_loss = total_val_gate_loss / len(val_loader)
+        avg_val_gate_acc = total_val_gate_acc / len(val_loader)
 
         if is_main_process:
-            print(f"Epoch {epoch+1} Val Loss: {avg_val_loss:.4f}, Val CLIP Loss: {avg_val_clip_loss:.4f}, Val Gate Loss: {avg_val_gate_loss:.4f}")
+            print(f"Epoch {epoch+1} Val Loss: {avg_val_loss:.4f}, Val CLIP Loss: {avg_val_clip_loss:.4f}, Val Gate Loss: {avg_val_gate_loss:.4f}, Val Gate Acc: {avg_val_gate_acc:.4f}")
 
             wandb.log({
                 "val/loss": avg_val_loss,
                 "val/clip_loss": avg_val_clip_loss,
                 "val/gate_loss": avg_val_gate_loss,
+                "val/gate_acc": avg_val_gate_acc,
+                "global_step": global_step,
                 "epoch": epoch + 1
             })
 
@@ -577,6 +646,7 @@ def main(args):
             }
 
             torch.save(checkpoint_data, latest_checkpoint_path)
+            print(f"💾 Latest model saved to {latest_checkpoint_path}")
 
             if avg_val_loss < best_val_loss:
                 best_val_loss = avg_val_loss
@@ -604,5 +674,6 @@ if __name__ == "__main__":
     parser.add_argument('--gate_loss_weight', type=float, default=0.2, help='Weight for the auxiliary gate loss.')
     parser.add_argument('--contact_threshold', type=float, default=0.8, help='Temporal threshold to consider as contact.')
     parser.add_argument('--resume_from', type=str, default=None, help='Path to a checkpoint to resume training from (e.g., "checkpoints/sensor_clip_latest.pth").')
+    parser.add_argument('--sensor_noise_std', type=float, default=0.01, help='Standard deviation of Gaussian noise to add to sensor data for augmentation. Set to 0 to disable.')
     args = parser.parse_args()
     main(args)

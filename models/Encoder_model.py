@@ -316,6 +316,7 @@ class UnifiedGatedSensorEncoder(nn.Module):
 
         # Squeeze gate_logit to (B,)
         gate_logit = gate_logit.squeeze(-1)
+        # gate_prob = self.gate_activation(gate_logit) # Reverted to output logits for BCEWithLogitsLoss
 
         if return_sequence:
             return fused_seq, global_features, gate_logit
