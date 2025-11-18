@@ -30,6 +30,8 @@ from torch.utils.data.distributed import DistributedSampler
 import math
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import numpy as np
+import time
+import wandb
 
 # Add project root to import custom modules
 import sys
@@ -39,6 +41,105 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from models.Encoder_model import UnifiedGatedSensorEncoder
 from vla_datasets.unified_dataset import create_unified_dataloader
 from vla_cache_manager import VLACacheManager
+
+# =====================================
+# Attention Pooling Module (from cache_clip_vlm_features.py)
+# =====================================
+
+class AttentionPooler(nn.Module):
+    """
+    Pools a sequence of image tokens into a fixed-size embedding using multi-head attention.
+    Identical to the implementation in cache_clip_vlm_features.py.
+    """
+    def __init__(self, input_dim: int, output_dim: int, num_heads: int = 8, dropout: float = 0.1):
+        super().__init__()
+        self.query = nn.Parameter(torch.randn(1, 1, output_dim))
+        self.attention = nn.MultiheadAttention(
+            embed_dim=output_dim,
+            num_heads=num_heads,
+            dropout=dropout,
+            kdim=input_dim,
+            vdim=input_dim,
+            batch_first=True
+        )
+        self.norm = nn.LayerNorm(output_dim)
+        self.mlp = nn.Sequential(
+            nn.Linear(output_dim, output_dim * 4),
+            nn.GELU(),
+            nn.Linear(output_dim * 4, output_dim)
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x (torch.Tensor): Image tokens of shape (B, N_tokens, D_in)
+        Returns:
+            torch.Tensor: Pooled embedding of shape (B, D_out)
+        """
+        B = x.shape[0]
+        query = self.query.expand(B, -1, -1)
+
+        attn_output, _ = self.attention(query, x, x)
+        attn_output = self.norm(attn_output)
+
+        mlp_output = self.mlp(attn_output)
+        return mlp_output.squeeze(1)
+
+# =====================================
+# 0. Collate Function for Variable-Length Vision Features
+# =====================================
+
+def clip_collate_fn(batch):
+    """
+    Custom collate function to handle both embedded and raw features.
+    - Embedded: [512] -> stack directly
+    - Raw: [N_tokens, D_vlm] -> pad to max length then stack
+    """
+    sensor_data = torch.stack([item["sensor_data"] for item in batch])
+    contact_labels = torch.tensor([item["contact_label"] for item in batch])
+    is_embedded_flags = torch.tensor([item["is_embedded"] for item in batch])
+
+    # Check if all items in batch have same embedding status
+    all_embedded = is_embedded_flags.all().item()
+    all_raw = (~is_embedded_flags).all().item()
+
+    if all_embedded:
+        # All already embedded: simple stack
+        vision_features = torch.stack([item["vision_features"] for item in batch])
+        text_features = torch.stack([item["text_features"] for item in batch])
+    elif all_raw:
+        # All raw features: pad and stack
+        text_features = torch.stack([item["text_features"] for item in batch])
+
+        # Find max sequence length and dimension
+        max_len = max(item["vision_features"].shape[0] for item in batch)
+        vision_dim = batch[0]["vision_features"].shape[-1]
+
+        # Pad vision features
+        vision_features_padded = []
+        for item in batch:
+            vision_feat = item["vision_features"]
+            seq_len = vision_feat.shape[0]
+            if seq_len < max_len:
+                padding = torch.zeros(max_len - seq_len, vision_dim, dtype=vision_feat.dtype)
+                vision_feat = torch.cat([vision_feat, padding], dim=0)
+            vision_features_padded.append(vision_feat)
+
+        vision_features = torch.stack(vision_features_padded)
+    else:
+        # Mixed batch: handle separately (shouldn't happen often with good batching)
+        raise ValueError(
+            f"Mixed batch detected: {is_embedded_flags.sum().item()} embedded, "
+            f"{(~is_embedded_flags).sum().item()} raw. Consider using batch_sampler."
+        )
+
+    return {
+        "sensor_data": sensor_data,
+        "vision_features": vision_features,
+        "text_features": text_features,
+        "is_embedded": all_embedded,
+        "contact_label": contact_labels
+    }
 
 # =====================================
 # 1. Dataset with Time-based Pseudo-Labeling
@@ -51,6 +152,8 @@ class SensorCLIPDataset(Dataset):
         self.contact_threshold = contact_threshold
 
         self.samples = []
+        self.num_positives = 0
+        self.num_negatives = 0
         self._prepare_samples()
 
     def _prepare_samples(self):
@@ -67,10 +170,18 @@ class SensorCLIPDataset(Dataset):
                 global_idx = global_idx_offset + local_idx
                 relative_pos = local_idx / (episode_len - 1) if episode_len > 1 else 1.0
                 
+                is_contact = relative_pos >= self.contact_threshold
+                contact_label = 0.9 if is_contact else 0.1
+
+                if is_contact:
+                    self.num_positives += 1
+                else:
+                    self.num_negatives += 1
+
                 self.samples.append({
                     "global_idx": global_idx,
                     "relative_pos": relative_pos,
-                    "contact_label": 1.0 if relative_pos >= self.contact_threshold else 0.0
+                    "contact_label": contact_label
                 })
             global_idx_offset += episode_len
 
@@ -79,31 +190,73 @@ class SensorCLIPDataset(Dataset):
 
     def __getitem__(self, idx):
         sample_info = self.samples[idx]
-        
+
         try:
             data = self.unified_dataset[sample_info["global_idx"]]
-            
-            # Load from low-dimensional cache
+
+            # Load raw features from cache
             episode_id = data["episode_id"]
             vlm_idx = data["vlm_idx"]
-            # NOTE: Assuming a single prompt hash for simplicity now.
-            # This can be extended to be task-specific if needed.
-            prompt_hash = "low_dim_cache" 
-            
-            vision_embedding, text_embedding = self.clip_cache_manager.load_cache(
+            prompt_hash = data.get("prompt_hash", "low_dim_cache")
+
+            cached_data = self.clip_cache_manager.load_cache(
                 episode_id, vlm_idx, prompt_hash
             )
 
+            if cached_data is None:
+                # If cache not found, try with first sample
+                if idx != 0:
+                    return self.__getitem__(0)
+                else:
+                    raise ValueError(f"Cache not found for {episode_id}_vlm{vlm_idx} with hash {prompt_hash}")
+
+            # Unpack cached features
+            vision_features, text_features = cached_data
+
+            # Check if already embedded (512d) or raw (2048d/3584d)
+            if vision_features.dim() == 1 and vision_features.shape[0] == 512:
+                # Already embedded: just use as is
+                is_embedded = True
+                vision_emb = vision_features  # [512]
+                text_emb = text_features      # [512]
+            else:
+                # Raw features: need to embed
+                is_embedded = False
+
+                # Normalize vision features to always be 2D [N_tokens, D]
+                if vision_features.dim() == 3:
+                    # [1, N, D] -> [N, D]
+                    vision_features = vision_features.squeeze(0)
+                elif vision_features.dim() == 1:
+                    # [D] -> [1, D] (single token)
+                    vision_features = vision_features.unsqueeze(0)
+                # If already 2D [N, D], keep as is
+
+                # Normalize text features to always be 1D [D]
+                if text_features.dim() == 2:
+                    # [1, D] -> [D]
+                    text_features = text_features.squeeze(0)
+                elif text_features.dim() == 0:
+                    # Scalar -> [1] (shouldn't happen, but defensive)
+                    text_features = text_features.unsqueeze(0)
+                # If already 1D [D], keep as is
+
+                vision_emb = vision_features  # [N_tokens, D_vlm]
+                text_emb = text_features      # [D_vlm]
+
             return {
                 "sensor_data": data["sensor_data"],
-                "vision_embedding": vision_embedding,
-                "text_embedding": text_embedding,
+                "vision_features": vision_emb,
+                "text_features": text_emb,
+                "is_embedded": is_embedded,
                 "contact_label": sample_info["contact_label"]
             }
         except Exception as e:
             # On error, return the first valid sample
-            # print(f"Warning: Error loading sample {idx}. Returning first sample. Error: {e}")
-            return self.__getitem__(0)
+            if idx != 0:
+                return self.__getitem__(0)
+            else:
+                raise e
 
 # =====================================
 # 2. CLIP Model Definition
@@ -113,7 +266,15 @@ class CLIPModel(nn.Module):
     def __init__(self, sensor_encoder: UnifiedGatedSensorEncoder, embedding_dim: int = 512, nhead: int = 8):
         super().__init__()
         self.sensor_encoder = sensor_encoder
-        
+        self.embedding_dim = embedding_dim
+
+        # Feature compression modules for raw features
+        # Support both 3B (2048d) and 7B (3584d) models
+        self.vision_pooler_2048 = AttentionPooler(2048, embedding_dim, num_heads=nhead)
+        self.vision_pooler_3584 = AttentionPooler(3584, embedding_dim, num_heads=nhead)
+        self.text_projector_2048 = nn.Linear(2048, embedding_dim)
+        self.text_projector_3584 = nn.Linear(3584, embedding_dim)
+
         # VLM fusion module
         self.vlm_fusion = nn.MultiheadAttention(
             embed_dim=embedding_dim,
@@ -122,10 +283,31 @@ class CLIPModel(nn.Module):
         )
         self.vlm_norm = nn.LayerNorm(embedding_dim)
 
-    def forward(self, sensor_data, vision_embedding, text_embedding):
+    def forward(self, sensor_data, vision_features, text_features, is_embedded):
         # Sensor encoding
         sensor_embedding, gate_logit = self.sensor_encoder(sensor_data)
-        
+
+        if is_embedded:
+            # Already embedded: use directly
+            # vision_features: [B, 512], text_features: [B, 512]
+            vision_embedding = vision_features
+            text_embedding = text_features
+        else:
+            # Raw features: compress based on dimension
+            # Detect VLM dimension from text features
+            vlm_dim = text_features.shape[-1]
+
+            if vlm_dim == 2048:
+                # 3B model
+                vision_embedding = self.vision_pooler_2048(vision_features)  # [B, N, 2048] -> [B, 512]
+                text_embedding = self.text_projector_2048(text_features)     # [B, 2048] -> [B, 512]
+            elif vlm_dim == 3584:
+                # 7B model
+                vision_embedding = self.vision_pooler_3584(vision_features)  # [B, N, 3584] -> [B, 512]
+                text_embedding = self.text_projector_3584(text_features)     # [B, 3584] -> [B, 512]
+            else:
+                raise ValueError(f"Unsupported VLM dimension: {vlm_dim}. Expected 2048 or 3584")
+
         # VLM feature fusion (text queries vision)
         fused_vlm, _ = self.vlm_fusion(
             query=text_embedding.unsqueeze(1),
@@ -137,7 +319,7 @@ class CLIPModel(nn.Module):
         # Normalize embeddings for contrastive loss
         sensor_embedding = F.normalize(sensor_embedding, dim=-1)
         fused_vlm = F.normalize(fused_vlm, dim=-1)
-        
+
         return sensor_embedding, fused_vlm, gate_logit
 
 # =====================================
@@ -165,8 +347,33 @@ def main(args):
 
     # Model Setup
     sensor_encoder = UnifiedGatedSensorEncoder(output_dim=args.embedding_dim)
-    model = CLIPModel(sensor_encoder, embedding_dim=args.embedding_dim).to(device)
-    model = DDP(model, device_ids=[local_rank])
+    model = CLIPModel(
+        sensor_encoder,
+        embedding_dim=args.embedding_dim,
+    ).to(device)
+
+    # Load pre-trained pooler and projector weights if available (for 7B model)
+    pooler_path = Path(args.checkpoint_dir) / "vision_pooler.pth"
+    projector_path = Path(args.checkpoint_dir) / "text_projector.pth"
+
+    if pooler_path.exists() and projector_path.exists():
+        if is_main_process:
+            print(f"Loading pre-trained 7B pooler/projector from {args.checkpoint_dir}")
+        try:
+            model.vision_pooler_3584.load_state_dict(torch.load(pooler_path, map_location=device))
+            model.text_projector_3584.load_state_dict(torch.load(projector_path, map_location=device))
+            if is_main_process:
+                print("✓ Successfully loaded pre-trained 7B weights")
+        except Exception as e:
+            if is_main_process:
+                print(f"⚠️ Failed to load weights: {e}")
+                print("   Starting with randomly initialized pooler and projector")
+    else:
+        if is_main_process:
+            print(f"⚠️ Pre-trained weights not found at {args.checkpoint_dir}")
+            print("   Starting with randomly initialized poolers and projectors")
+
+    model = DDP(model, device_ids=[local_rank], find_unused_parameters=True)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=0.01)
     
@@ -186,36 +393,87 @@ def main(args):
         contact_threshold=args.contact_threshold
     )
 
+    # Calculate pos_weight for BCEWithLogitsLoss to handle class imbalance
+    if is_main_process:
+        print(f"✓ Dataset prepared: {len(full_dataset)} samples")
+        print(f"  - Positive (contact) samples: {full_dataset.num_positives}")
+        print(f"  - Negative (no-contact) samples: {full_dataset.num_negatives}")
+
+    if full_dataset.num_positives > 0:
+        pos_weight_value = full_dataset.num_negatives / full_dataset.num_positives
+    else:
+        pos_weight_value = 1.0  # Avoid division by zero, default to no weight
+
+    pos_weight_tensor = torch.tensor([pos_weight_value], device=device)
+    
+    if is_main_process:
+        print(f"✓ Calculated pos_weight for gate loss: {pos_weight_value:.2f}")
+
     # Split and create DataLoaders
     val_size = int(len(full_dataset) * args.val_split)
     train_size = len(full_dataset) - val_size
     train_dataset, val_dataset = torch.utils.data.random_split(full_dataset, [train_size, val_size])
 
     train_sampler = DistributedSampler(train_dataset, shuffle=True)
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, sampler=train_sampler, num_workers=args.num_workers, pin_memory=True)
-    
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=args.batch_size,
+        sampler=train_sampler,
+        num_workers=args.num_workers,
+        pin_memory=True,
+        collate_fn=clip_collate_fn
+    )
+
     val_sampler = DistributedSampler(val_dataset, shuffle=False)
-    val_loader = DataLoader(val_dataset, batch_size=args.batch_size * 2, sampler=val_sampler, num_workers=args.num_workers, pin_memory=True)
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=args.batch_size * 2,
+        sampler=val_sampler,
+        num_workers=args.num_workers,
+        pin_memory=True,
+        collate_fn=clip_collate_fn
+    )
 
     # Scheduler and Loss
     scheduler = CosineAnnealingLR(optimizer, T_max=len(train_loader) * args.epochs, eta_min=1e-6)
-    gate_criterion = nn.BCEWithLogitsLoss()
+    gate_criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight_tensor)
     logit_scale = nn.Parameter(torch.tensor(math.log(1 / 0.07))).to(device)
+
+    # Initialize wandb (only on main process)
+    if is_main_process:
+        wandb.init(
+            project="QwenVLA-SensorCLIP",
+            name=f"sensor_clip_{time.strftime('%m%d_%H%M')}",
+            resume="allow",
+            id=f"sensor_clip_{int(time.time())}",
+            settings=wandb.Settings(start_method="thread", _disable_stats=True),
+            config={
+                "epochs": args.epochs,
+                "batch_size": args.batch_size,
+                "learning_rate": args.learning_rate,
+                "embedding_dim": args.embedding_dim,
+                "gate_loss_weight": args.gate_loss_weight,
+                "contact_threshold": args.contact_threshold,
+            }
+        )
+
+    global_step = 0
 
     # Training Loop
     for epoch in range(args.epochs):
         train_sampler.set_epoch(epoch)
         model.train()
         pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}", disable=not is_main_process)
-        
+
         for batch in pbar:
             sensor_data = batch["sensor_data"].to(device, dtype=torch.bfloat16)
-            vision_emb = batch["vision_embedding"].to(device, dtype=torch.bfloat16)
-            text_emb = batch["text_embedding"].to(device, dtype=torch.bfloat16)
+            vision_features = batch["vision_features"].to(device, dtype=torch.bfloat16)
+            text_features = batch["text_features"].to(device, dtype=torch.bfloat16)
+            is_embedded = batch["is_embedded"]
             contact_labels = batch["contact_label"].to(device, dtype=torch.bfloat16)
 
             with torch.cuda.amp.autocast(dtype=torch.bfloat16):
-                sensor_emb, vlm_emb, gate_logit = model(sensor_data, vision_emb, text_emb)
+                sensor_emb, vlm_emb, gate_logit = model(sensor_data, vision_features, text_features, is_embedded)
                 
                 # CLIP Loss
                 clip_loss = siglip_loss(sensor_emb, vlm_emb, logit_scale.exp())
@@ -230,8 +488,21 @@ def main(args):
             optimizer.step()
             scheduler.step()
 
+            global_step += 1
+
             if is_main_process:
-                pbar.set_postfix(loss=total_loss.item(), clip=clip_loss.item(), gate=gate_loss.item())
+                current_lr = optimizer.param_groups[0]['lr']
+                pbar.set_postfix(loss=total_loss.item(), clip=clip_loss.item(), gate=gate_loss.item(), lr=f"{current_lr:.2e}")
+
+                # Log to wandb
+                wandb.log({
+                    "train/loss": total_loss.item(),
+                    "train/clip_loss": clip_loss.item(),
+                    "train/gate_loss": gate_loss.item(),
+                    "train/lr": current_lr,
+                    "global_step": global_step,
+                    "epoch": epoch + 1
+                })
 
         # Validation Loop
         model.eval()
@@ -239,12 +510,13 @@ def main(args):
         with torch.no_grad():
             for batch in val_loader:
                 sensor_data = batch["sensor_data"].to(device, dtype=torch.bfloat16)
-                vision_emb = batch["vision_embedding"].to(device, dtype=torch.bfloat16)
-                text_emb = batch["text_embedding"].to(device, dtype=torch.bfloat16)
+                vision_features = batch["vision_features"].to(device, dtype=torch.bfloat16)
+                text_features = batch["text_features"].to(device, dtype=torch.bfloat16)
+                is_embedded = batch["is_embedded"]
                 contact_labels = batch["contact_label"].to(device, dtype=torch.bfloat16)
 
                 with torch.cuda.amp.autocast(dtype=torch.bfloat16):
-                    sensor_emb, vlm_emb, gate_logit = model(sensor_data, vision_emb, text_emb)
+                    sensor_emb, vlm_emb, gate_logit = model(sensor_data, vision_features, text_features, is_embedded)
                     clip_loss = siglip_loss(sensor_emb, vlm_emb, logit_scale.exp())
                     gate_loss = gate_criterion(gate_logit, contact_labels)
                     total_loss = clip_loss + args.gate_loss_weight * gate_loss
@@ -254,7 +526,17 @@ def main(args):
         avg_val_loss = total_val_loss / len(val_loader)
         if is_main_process:
             print(f"Epoch {epoch+1} Val Loss: {avg_val_loss:.4f}")
+
+            # Log validation metrics to wandb
+            wandb.log({
+                "val/loss": avg_val_loss,
+                "epoch": epoch + 1
+            })
+
             torch.save(model.module.sensor_encoder.state_dict(), Path(args.checkpoint_dir) / "sensor_clip_latest.pth")
+
+    if is_main_process:
+        wandb.finish()
 
     dist.destroy_process_group()
 

@@ -32,6 +32,8 @@ import random
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
+import time
+import wandb
 
 torch.backends.cudnn.benchmark = False
 torch.backends.cudnn.deterministic = True
@@ -398,6 +400,32 @@ def main(args):
         if 'best_val_loss' in checkpoint:
             best_val_loss = checkpoint['best_val_loss']
 
+    # Initialize wandb (only on main process)
+    if is_main_process:
+        wandb.init(
+            project="QwenVLA-RobotStateMAE",
+            name=f"robot_state_mae_{time.strftime('%m%d_%H%M')}",
+            resume="allow",
+            id=f"robot_state_mae_{int(time.time())}",
+            settings=wandb.Settings(start_method="thread", _disable_stats=True),
+            config={
+                "epochs": args.epochs,
+                "batch_size": args.batch_size,
+                "learning_rate": args.learning_rate,
+                "weight_decay": args.weight_decay,
+                "window_size": args.window_size,
+                "mask_ratio": args.mask_ratio,
+                "model_dim": args.model_dim,
+                "num_heads": args.num_heads,
+                "num_layers": args.num_layers,
+                "output_dim": args.output_dim,
+                "joint_weight": args.joint_weight,
+                "pose_weight": args.pose_weight,
+            }
+        )
+
+    global_step = 0
+
     # Training Loop
     if is_main_process:
         print("Starting MAE pre-training...")
@@ -449,12 +477,30 @@ def main(args):
                 if scheduler is not None and args.sched_on == "step":
                     scheduler.step()
 
+                global_step += 1
+
             if is_main_process:
+                current_lr = optimizer.param_groups[0]['lr']
+                j_loss_val = loss_joints if isinstance(loss_joints, float) else loss_joints.item()
+                p_loss_val = loss_pose if isinstance(loss_pose, float) else loss_pose.item()
+
                 train_progress_bar.set_postfix(
                     loss=loss.item(),
-                    j_loss=loss_joints if isinstance(loss_joints, float) else loss_joints.item(),
-                    p_loss=loss_pose if isinstance(loss_pose, float) else loss_pose.item()
+                    j_loss=j_loss_val,
+                    p_loss=p_loss_val,
+                    lr=f"{current_lr:.2e}"
                 )
+
+                # Log to wandb
+                if step % args.grad_accum == 0:  # Only log after optimizer step
+                    wandb.log({
+                        "train/loss": loss.item(),
+                        "train/joint_loss": j_loss_val,
+                        "train/pose_loss": p_loss_val,
+                        "train/lr": current_lr,
+                        "global_step": global_step,
+                        "epoch": epoch + 1
+                    })
 
         # 에폭 스케줄러는 에폭당 1회만
         if scheduler is not None and args.sched_on == "epoch":
@@ -506,6 +552,12 @@ def main(args):
         if is_main_process:
             print(f"Epoch {epoch + 1} Validation Loss: {avg_val_loss:.4f}")
 
+            # Log validation metrics to wandb
+            wandb.log({
+                "val/loss": avg_val_loss,
+                "epoch": epoch + 1
+            })
+
             # Save checkpoint
             latest_checkpoint_path = os.path.join(args.checkpoint_dir, "robot_state_mae_latest.pth")
             best_checkpoint_path = os.path.join(args.checkpoint_dir, "robot_state_mae_best.pth")
@@ -533,7 +585,8 @@ def main(args):
 
     if is_main_process:
         print("MAE Pre-training finished.")
-    
+        wandb.finish()
+
     dist.destroy_process_group()
 
 # =====================================

@@ -12,14 +12,55 @@ set -e
 
 # --- Configuration ---
 DATASET_PATHS_ALL=(
-    "/home/najo/NAS/VLA/dataset/New_dataset2/*_point"
-    "/home/najo/NAS/VLA/dataset/New_dataset3/*_point"
+    # "/home/najo/NAS/VLA/dataset/New_dataset2/*_point"
+    "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point"
     "/home/najo/NAS/VLA/dataset/New_dataset4/Eye_trocar"
-    "/home/najo/NAS/VLA/dataset/New_dataset6/*_point"
+    "/home/najo/NAS/VLA/dataset/New_dataset5/Eye_trocar"
+    "/home/najo/NAS/VLA/dataset/New_dataset6/Red_point"
+    "/home/najo/NAS/VLA/dataset/New_dataset6/Blue_point"
+    "/home/najo/NAS/VLA/dataset/New_dataset6/Green_point"
+    "/home/najo/NAS/VLA/dataset/New_dataset6/White_point"
+    "/home/najo/NAS/VLA/dataset/New_dataset6/Yellow_point"
 )
 CACHE_ROOT="/home/najo/NAS/VLA/dataset/cache"
 CHECKPOINT_DIR="./checkpoints"
 NUM_GPUS=4
+
+# =============================================================================
+# STEP 0: Pre-train Robot State Encoder (MAE)
+# =============================================================================
+echo ""
+echo "=============== STEP 0: Pre-training Robot State Encoder (MAE) ==============="
+echo "This is a crucial first step for the main VLA model."
+echo ""
+
+# First, convert all robot_states.csv to .npz for faster loading
+# python convert_robot_states_to_npz.py "${DATASET_PATHS_ALL[@]}"
+
+# CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
+#     --nproc_per_node=$NUM_GPUS \
+#     --master_port=29510 \
+#     TRAIN_RobotState_MAE.py \
+#     --epochs 200 \
+#     --batch_size 128 \
+#     --learning_rate 3e-4 \
+#     --weight_decay 0.01 \
+#     --dataset_paths "${DATASET_PATHS_ALL[@]}" \
+#     --val_split 0.1 \
+#     --window_size 100 \
+#     --mask_ratio 0.75 \
+#     --model_dim 512 \
+#     --num_heads 8 \
+#     --num_layers 6 \
+#     --output_dim 1024 \
+#     --min_lr 1e-6 \
+#     --warmup_ratio 0.03 \
+#     --num_workers 8 \
+#     --checkpoint_dir "$CHECKPOINT_DIR"
+#     --resume_from "$CHECKPOINT_DIR/robot_state_mae_latest.pth"
+
+echo "=============== Robot State Encoder Pre-training Complete ==============="
+echo ""
 
 # =============================================================================
 # STEP 1: Generate Low-Dimensional CLIP VLM Cache (Required)
@@ -31,17 +72,18 @@ echo "Output Dimension: 512"
 echo "This will take a while on the first run..."
 echo ""
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
-    --nproc_per_node=$NUM_GPUS \
-    --master_port=29500 \
-    cache_clip_vlm_features.py \
-    --new_dataset_paths "${DATASET_PATHS_ALL[@]}" \
-    --cache_root "$CACHE_ROOT" \
-    --checkpoint_dir "$CHECKPOINT_DIR" \
-    --vlm_model "Qwen/Qwen2.5-VL-3B-Instruct" \
-    --embedding_dim 512 \
-    --batch_size 32 \
-    --num_workers 8
+# CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
+#     --nproc_per_node=$NUM_GPUS \
+#     --master_port=29500 \
+#     cache_clip_vlm_features.py \
+#     --new_dataset_paths "${DATASET_PATHS_ALL[@]}" \
+#     --cache_root "$CACHE_ROOT" \
+#     --checkpoint_dir "$CHECKPOINT_DIR" \
+#     --embedding_dim 512 \
+#     --batch_size 4 \
+#     --num_workers 4 \
+#     --image_resize_height 360 \
+#     --image_resize_width 640
 
 echo "=============== CLIP VLM Cache Generation Complete ==============="
 echo ""
@@ -63,8 +105,8 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
     --cache_root "$CACHE_ROOT" \
     --checkpoint_dir "$CHECKPOINT_DIR" \
     --epochs 50 \
-    --batch_size 128 \
-    --num_workers 8 \
+    --batch_size 64 \
+    --num_workers 6 \
     --learning_rate 2e-4 \
     --embedding_dim 512 \
     --gate_loss_weight 0.25 \

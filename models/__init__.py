@@ -22,10 +22,13 @@ from .unified_model import QwenVLAUnified
 
 # Encoder components
 from .Encoder_model import (
-    SensorEncoder,
     RobotStateEncoder,
-    ForceAwareSensorEncoder,
+    UnifiedGatedSensorEncoder,
 )
+
+# Backward compatibility aliases
+SensorEncoder = UnifiedGatedSensorEncoder
+ForceAwareSensorEncoder = UnifiedGatedSensorEncoder
 
 # Action decoder components
 from .action_decoder import (
@@ -43,9 +46,10 @@ __all__ = [
     'QwenVLAUnified',
 
     # Encoder components
-    'SensorEncoder',
     'RobotStateEncoder',
-    'ForceAwareSensorEncoder',
+    'UnifiedGatedSensorEncoder',
+    'SensorEncoder',  # Alias for backward compatibility
+    'ForceAwareSensorEncoder',  # Alias for backward compatibility
     'VisionLanguageEncoder',
 
     # Action decoder components
