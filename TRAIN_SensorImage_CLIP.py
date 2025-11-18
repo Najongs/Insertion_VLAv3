@@ -435,15 +435,43 @@ def main(args):
     )
 
     # Scheduler and Loss
-    scheduler = CosineAnnealingLR(optimizer, T_max=len(train_loader) * args.epochs, eta_min=1e-6)
+    scheduler = CosineAnnealingLR(optimizer, T_max=len(train_loader) * args.epochs, eta_min=1e-7)
     gate_criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight_tensor)
     logit_scale = nn.Parameter(torch.tensor(math.log(1 / 0.07))).to(device)
+
+    start_epoch = 0
+    global_step = 0
+    best_val_loss = float('inf')
+
+    if args.resume_from and Path(args.resume_from).exists():
+        if is_main_process:
+            print(f"Resuming training from checkpoint: {args.resume_from}")
+        
+        checkpoint = torch.load(args.resume_from, map_location=device)
+        
+        model.module.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+        logit_scale.data = checkpoint['logit_scale']
+        
+        start_epoch = checkpoint['epoch'] + 1
+        global_step = checkpoint.get('global_step', 0)
+        best_val_loss = checkpoint.get('best_val_loss', float('inf'))
+        
+        if is_main_process:
+            print(f"✓ Resumed from epoch {checkpoint['epoch']}. Starting next epoch at {start_epoch}.")
+    else:
+        if args.resume_from:
+            if is_main_process:
+                print(f"⚠️ --resume_from was set, but checkpoint not found at {args.resume_from}. Starting from scratch.")
+        os.makedirs(args.checkpoint_dir, exist_ok=True)
+
 
     # Initialize wandb (only on main process)
     if is_main_process:
         wandb.init(
             project="QwenVLA-SensorCLIP",
-            name=f"sensor_clip_{time.strftime('%m%d_%H%M')}",
+            name=f"sensor_clip_{time.strftime('%Y%m%d_%H%M')}",
             resume="allow",
             id=f"sensor_clip_{int(time.time())}",
             settings=wandb.Settings(start_method="thread", _disable_stats=True),
@@ -457,10 +485,8 @@ def main(args):
             }
         )
 
-    global_step = 0
-
     # Training Loop
-    for epoch in range(args.epochs):
+    for epoch in range(start_epoch, args.epochs):
         train_sampler.set_epoch(epoch)
         model.train()
         pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}", disable=not is_main_process)
@@ -475,12 +501,8 @@ def main(args):
             with torch.cuda.amp.autocast(dtype=torch.bfloat16):
                 sensor_emb, vlm_emb, gate_logit = model(sensor_data, vision_features, text_features, is_embedded)
                 
-                # CLIP Loss
                 clip_loss = siglip_loss(sensor_emb, vlm_emb, logit_scale.exp())
-                
-                # Gate Loss
                 gate_loss = gate_criterion(gate_logit, contact_labels)
-                
                 total_loss = clip_loss + args.gate_loss_weight * gate_loss
 
             optimizer.zero_grad()
@@ -494,7 +516,6 @@ def main(args):
                 current_lr = optimizer.param_groups[0]['lr']
                 pbar.set_postfix(loss=total_loss.item(), clip=clip_loss.item(), gate=gate_loss.item(), lr=f"{current_lr:.2e}")
 
-                # Log to wandb
                 wandb.log({
                     "train/loss": total_loss.item(),
                     "train/clip_loss": clip_loss.item(),
@@ -506,7 +527,7 @@ def main(args):
 
         # Validation Loop
         model.eval()
-        total_val_loss = 0
+        total_val_loss, total_val_clip_loss, total_val_gate_loss = 0, 0, 0
         with torch.no_grad():
             for batch in val_loader:
                 sensor_data = batch["sensor_data"].to(device, dtype=torch.bfloat16)
@@ -522,18 +543,47 @@ def main(args):
                     total_loss = clip_loss + args.gate_loss_weight * gate_loss
                 
                 total_val_loss += total_loss.item()
+                total_val_clip_loss += clip_loss.item()
+                total_val_gate_loss += gate_loss.item()
         
         avg_val_loss = total_val_loss / len(val_loader)
-        if is_main_process:
-            print(f"Epoch {epoch+1} Val Loss: {avg_val_loss:.4f}")
+        avg_val_clip_loss = total_val_clip_loss / len(val_loader)
+        avg_val_gate_loss = total_val_gate_loss / len(val_loader)
 
-            # Log validation metrics to wandb
+        if is_main_process:
+            print(f"Epoch {epoch+1} Val Loss: {avg_val_loss:.4f}, Val CLIP Loss: {avg_val_clip_loss:.4f}, Val Gate Loss: {avg_val_gate_loss:.4f}")
+
             wandb.log({
                 "val/loss": avg_val_loss,
+                "val/clip_loss": avg_val_clip_loss,
+                "val/gate_loss": avg_val_gate_loss,
                 "epoch": epoch + 1
             })
 
-            torch.save(model.module.sensor_encoder.state_dict(), Path(args.checkpoint_dir) / "sensor_clip_latest.pth")
+            # Save checkpoint
+            latest_checkpoint_path = Path(args.checkpoint_dir) / "sensor_clip_latest.pth"
+            best_checkpoint_path = Path(args.checkpoint_dir) / "sensor_clip_best.pth"
+            
+            checkpoint_data = {
+                'epoch': epoch,
+                'global_step': global_step,
+                'model_state_dict': model.module.state_dict(),
+                'encoder_state_dict': model.module.sensor_encoder.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'scheduler_state_dict': scheduler.state_dict(),
+                'logit_scale': logit_scale.data,
+                'val_loss': avg_val_loss,
+                'best_val_loss': best_val_loss
+            }
+
+            torch.save(checkpoint_data, latest_checkpoint_path)
+
+            if avg_val_loss < best_val_loss:
+                best_val_loss = avg_val_loss
+                checkpoint_data['best_val_loss'] = best_val_loss
+                torch.save(checkpoint_data, best_checkpoint_path)
+                print(f"✨ New best model saved to {best_checkpoint_path} with validation loss: {avg_val_loss:.4f}")
+
 
     if is_main_process:
         wandb.finish()
@@ -553,5 +603,6 @@ if __name__ == "__main__":
     parser.add_argument('--val_split', type=float, default=0.05)
     parser.add_argument('--gate_loss_weight', type=float, default=0.2, help='Weight for the auxiliary gate loss.')
     parser.add_argument('--contact_threshold', type=float, default=0.8, help='Temporal threshold to consider as contact.')
+    parser.add_argument('--resume_from', type=str, default=None, help='Path to a checkpoint to resume training from (e.g., "checkpoints/sensor_clip_latest.pth").')
     args = parser.parse_args()
     main(args)

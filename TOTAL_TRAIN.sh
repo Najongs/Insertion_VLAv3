@@ -26,6 +26,9 @@ CACHE_ROOT="/home/najo/NAS/VLA/dataset/cache"
 CHECKPOINT_DIR="./checkpoints"
 NUM_GPUS=4
 
+# Sensor CLIP Pre-training specific configuration
+SENSOR_CLIP_RUN_NAME="sensor_clip_pretrain_$(date +%Y%m%d_%H%M%S)" # Unique name for this run
+
 # =============================================================================
 # STEP 0: Pre-train Robot State Encoder (MAE)
 # =============================================================================
@@ -106,11 +109,13 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
     --checkpoint_dir "$CHECKPOINT_DIR" \
     --epochs 50 \
     --batch_size 64 \
-    --num_workers 6 \
+    --num_workers 8 \
     --learning_rate 2e-4 \
     --embedding_dim 512 \
     --gate_loss_weight 0.25 \
     --contact_threshold 0.85
+
+    # --resume "/home/najo/NAS/VLA/Insertion_VLAv3/checkpoints/sensor_clip_best.pth"
 
 echo "=============== Sensor Encoder Pre-training Complete ==============="
 echo ""
