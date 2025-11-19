@@ -13,8 +13,8 @@ set -e
 # --- Configuration ---
 DATASET_PATHS_ALL=(
     # "/home/najo/NAS/VLA/dataset/New_dataset2/*_point"
-    # "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point"
-    # "/home/najo/NAS/VLA/dataset/New_dataset4/Eye_trocar"
+    "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point"
+    "/home/najo/NAS/VLA/dataset/New_dataset4/Eye_trocar"
     "/home/najo/NAS/VLA/dataset/New_dataset5/Eye_trocar"
     "/home/najo/NAS/VLA/dataset/New_dataset6/Red_point"
     "/home/najo/NAS/VLA/dataset/New_dataset6/Blue_point"
@@ -30,77 +30,58 @@ NUM_GPUS=4
 SENSOR_CLIP_RUN_NAME="sensor_clip_pretrain_$(date +%Y%m%d_%H%M%S)" # Unique name for this run
 
 # =============================================================================
-# STEP 0: Pre-train Robot State Encoder (MAE)
+# STEP 0: Pre-train Robot State Encoder (MAE with Fourier Features)
 # =============================================================================
 echo ""
 echo "=============== STEP 0: Pre-training Robot State Encoder (MAE) ==============="
-echo "This is a crucial first step for the main VLA model."
-echo "We will train two separate models: one for 'delta' and one for 'absolute' representations."
+echo "Using Fourier Feature Projection + Absolute representation"
+echo "This approach combines:"
+echo "  - Absolute position information (no data loss)"
+echo "  - High-frequency detail capture via Fourier Features"
+echo "  - Last Token pooling for recent state focus"
 echo ""
 
 # First, convert all robot_states.csv to .npz for faster loading
 # python convert_robot_states_to_npz.py "${DATASET_PATHS_ALL[@]}"
 
-# --- Train 'delta' representation model ---
-# echo "--- Training MAE with 'delta' representation ---"
-# CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
-#     --nproc_per_node=4 \
-#     --master_port=29515 \
-#     TRAIN_RobotState_MAE.py \
-#     --epochs 100 \
-#     --batch_size 128 \
-#     --learning_rate 1e-4 \
-#     --weight_decay 0.01 \
-#     --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset3/Red_point" "/home/najo/NAS/VLA/dataset/New_dataset4/Eye_trocar" "/home/najo/NAS/VLA/dataset/New_dataset5/Eye_trocar" "/home/najo/NAS/VLA/dataset/New_dataset6/Red_point" "/home/najo/NAS/VLA/dataset/New_dataset6/Blue_point" "/home/najo/NAS/VLA/dataset/New_dataset6/Green_point" "/home/najo/NAS/VLA/dataset/New_dataset6/White_point" "/home/najo/NAS/VLA/dataset/New_dataset6/Yellow_point" \   --val_split 0.1 \
-#     --window_size 100 \
-#     --mask_ratio 0.75 \
-#     --model_dim 512 \
-#     --num_heads 8 \
-#     --num_layers 6 \
-#     --output_dim 1024 \
-#     --min_lr 1e-7 \
-#     --num_workers 4 \
-#     --checkpoint_dir "./checkpoints" \
-#     --data_representation "delta"
-
-# # Rename the best model checkpoint
-# if [ -f "$CHECKPOINT_DIR/robot_state_mae_best.pth" ]; then
-#     mv "$CHECKPOINT_DIR/robot_state_mae_best.pth" "$CHECKPOINT_DIR/robot_state_mae_best_delta.pth"
-#     echo "✅ Renamed best delta model to robot_state_mae_best_delta.pth"
-# fi
-# if [ -f "$CHECKPOINT_DIR/robot_state_mae_latest.pth" ]; then
-#     mv "$CHECKPOINT_DIR/robot_state_mae_latest.pth" "$CHECKPOINT_DIR/robot_state_mae_latest_delta.pth"
-# fi
-
-
-# --- Train 'absolute' representation model ---
-# echo ""
-# echo "--- Training MAE with 'absolute' representation ---"
-# CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
-#     --nproc_per_node=$NUM_GPUS \
-#     --master_port=29510 \
-#     TRAIN_RobotState_MAE.py \
-#     --epochs 100 \
-#     --batch_size 128 \
-#     --learning_rate 1e-4 \
-#     --weight_decay 0.01 \
-#     --dataset_paths "${DATASET_PATHS_ALL[@]}" \
-#     --val_split 0.1 \
-#     --window_size 100 \
-#     --mask_ratio 0.75 \
-#     --model_dim 512 \
-#     --num_heads 8 \
-#     --num_layers 6 \
-#     --output_dim 1024 \
-#     --min_lr 1e-7 \
-#     --num_workers 4 \
-#     --checkpoint_dir "$CHECKPOINT_DIR" \
-#     --data_representation "absolute"
+# --- Train with Fourier Features + Absolute representation ---
+# echo "--- Training MAE with Fourier Features + 'absolute' representation ---"
+CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
+    --nproc_per_node=4 \
+    --master_port=29510 \
+    TRAIN_RobotState_MAE.py \
+    --epochs 100 \
+    --batch_size 128 \
+    --learning_rate 1e-4 \
+    --weight_decay 0.01 \
+    --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset6/Red_point" "/home/najo/NAS/VLA/dataset/New_dataset6/Blue_point" "/home/najo/NAS/VLA/dataset/New_dataset6/Green_point" "/home/najo/NAS/VLA/dataset/New_dataset6/White_point" "/home/najo/NAS/VLA/dataset/New_dataset6/Yellow_point" \
+    --val_split 0.1 \
+    --window_size 100 \
+    --mask_ratio 0.50 \
+    --model_dim 512 \
+    --num_heads 8 \
+    --num_layers 6 \
+    --output_dim 512 \
+    --min_lr 1e-6 \
+    --num_workers 4 \
+    --checkpoint_dir "./checkpoints" \
+    --data_representation "absolute" \
+    --joint_weight 0.5 \
+    --position_weight 2.0 \
+    --rotation_weight 0.5 \
+    --num_tasks 6 \
+    --task_embed_dim 64 \
+    --decoder_dim 256 \
+    --decoder_num_layers 4 \
+    --decoder_num_heads 8 \
+    --decoder_dropout 0.1 \
+    --resume_from "/home/najo/NAS/VLA/Insertion_VLAv3/checkpoints/robot_state_mae_latest.pth" \
+    # --reset_lr  # Reset learning rate to 1e-4 for faster convergence
 
 # # Rename the best model checkpoint
 # if [ -f "$CHECKPOINT_DIR/robot_state_mae_best.pth" ]; then
 #     mv "$CHECKPOINT_DIR/robot_state_mae_best.pth" "$CHECKPOINT_DIR/robot_state_mae_best_absolute.pth"
-#     echo "✅ Renamed best absolute model to robot_state_mae_best_absolute.pth"
+#     echo "✅ Renamed best model to robot_state_mae_best_absolute.pth"
 # fi
 # if [ -f "$CHECKPOINT_DIR/robot_state_mae_latest.pth" ]; then
 #     mv "$CHECKPOINT_DIR/robot_state_mae_latest.pth" "$CHECKPOINT_DIR/robot_state_mae_latest_absolute.pth"
@@ -113,64 +94,35 @@ echo ""
 # =============================================================================
 # STEP 0.5: Evaluate Robot State Encoder (MAE)
 echo ""
-echo "=============== STEP 0.5: Evaluating Robot State Encoders ==============="
-echo "Running both absolute/delta reconstruction metrics for each model."
+echo "=============== STEP 0.5: Evaluating Robot State Encoder (Fourier + Absolute) ==============="
+echo "Evaluating reconstruction quality in absolute space."
 echo ""
 
-# # --- Evaluate 'absolute' model ---
-# echo "--- Evaluating 'absolute' representation model (absolute-space metric) ---"
-# python evaluate_robot_state_mae.py \
-#     --checkpoint_path "./checkpoints/robot_state_mae_best_absolute.pth" \
-#     --data_representation absolute \
-#     --evaluation_representation absolute \
-#     --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset6/Yellow_point" \
-#     --output_dir "evaluation_results/mae_reconstruction_absolute" \
-#     --window_size 100 \
-#     --model_dim 512 \
-#     --num_heads 8 \
-#     --num_layers 6 \
-#     --output_dim 1024
+# # --- Evaluate Fourier Feature + Absolute model ---
+# echo "--- Evaluating Fourier Feature model (absolute-space reconstruction) ---"
 
-# echo "--- Evaluating 'absolute' representation model (delta-space metric) ---"
-# python evaluate_robot_state_mae.py \
-#     --checkpoint_path "./checkpoints/robot_state_mae_best_absolute.pth" \
-#     --data_representation absolute \
-#     --evaluation_representation delta \
-#     --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset6/Yellow_point" \
-#     --output_dir "evaluation_results/mae_reconstruction_absolute_delta_metric" \
-#     --window_size 100 \
-#     --model_dim 512 \
-#     --num_heads 8 \
-#     --num_layers 6 \
-#     --output_dim 1024
+python evaluate_robot_state_mae.py \
+    --checkpoint_path "./checkpoints/robot_state_mae_latest.pth" \
+    --data_representation absolute \
+    --evaluation_representation absolute \
+    --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset6/Yellow_point" \
+    --output_dir "evaluation_results/mae_reconstruction_fourier_absolute" \
+    --window_size 100 \
+    --mask_ratio 0.50 \
+    --model_dim 512 \
+    --num_heads 8 \
+    --num_layers 6 \
+    --output_dim 512 \
+    --use_fourier_features \
+    --num_frequencies 8 \
+    --num_tasks 6 \
+    --task_embed_dim 64 \
+    --decoder_dim 256 \
+    --decoder_num_layers 4 \
+    --decoder_num_heads 8 \
+    --decoder_dropout 0.1 \
+    --load_encoder_from_e2e "/home/najo/NAS/VLA/Insertion_VLAv3/checkpoints/flow_matching_latest.pt"
 
-# echo ""
-# # --- Evaluate 'delta' model ---
-# echo "--- Evaluating 'delta' representation model (delta-space metric) ---"
-# python evaluate_robot_state_mae.py \
-#     --checkpoint_path "./checkpoints/robot_state_mae_best_delta.pth" \
-#     --data_representation delta \
-#     --evaluation_representation delta \
-#     --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset6/Yellow_point" \
-#     --output_dir "evaluation_results/mae_reconstruction_delta" \
-#     --window_size 100 \
-#     --model_dim 512 \
-#     --num_heads 8 \
-#     --num_layers 6 \
-#     --output_dim 1024
-
-# echo "--- Evaluating 'delta' representation model (absolute-space metric) ---"
-# python evaluate_robot_state_mae.py \
-#     --checkpoint_path "./checkpoints/robot_state_mae_best_delta.pth" \
-#     --data_representation delta \
-#     --evaluation_representation absolute \
-#     --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset6/Yellow_point" \
-#     --output_dir "evaluation_results/mae_reconstruction_delta_absolute_metric" \
-#     --window_size 100 \
-#     --model_dim 512 \
-#     --num_heads 8 \
-#     --num_layers 6 \
-#     --output_dim 1024
 
 echo "=============== MAE Evaluation Complete ==============="
 echo ""
@@ -284,20 +236,20 @@ echo "Using vlm_reuse_count=1 for complete coverage."
 echo "This will take 30-60 minutes but makes training MUCH faster!"
 echo ""
 
-# PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
-# CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
-#     --nproc_per_node=$NUM_GPUS \
-#     --master_port=29502 \
-#     TRAIN_FlowMatching.py \
-#     --mode cache \
-#     --dataset_paths "${DATASET_PATHS_ALL[@]}" \
-#     --batch_size 64 \
-#     --num_workers 8 \
-#     --vlm_reuse_count 1 \
-#     --image_resize_height 360 \
-#     --image_resize_width 640 \
-#     --cache_root "$CACHE_ROOT/qwen_vl_features" \
-#     --skip_dataset_stats
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun \
+    --nproc_per_node=4 \
+    --master_port=29502 \
+    TRAIN_FlowMatching.py \
+    --mode cache \
+    --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset6/Red_point" "/home/najo/NAS/VLA/dataset/New_dataset6/Blue_point" "/home/najo/NAS/VLA/dataset/New_dataset6/Green_point" "/home/najo/NAS/VLA/dataset/New_dataset6/White_point" "/home/najo/NAS/VLA/dataset/New_dataset6/Yellow_point" \
+    --batch_size 64 \
+    --num_workers 8 \
+    --vlm_reuse_count 1 \
+    --image_resize_height 360 \
+    --image_resize_width 640 \
+    --cache_root "/home/najo/NAS/VLA/dataset/cache/qwen_vl_features" \
+    --skip_dataset_stats
 
 echo "=============== Action Decoder VL Cache Generation Complete ==============="
 echo ""
@@ -307,7 +259,9 @@ echo ""
 # =============================================================================
 echo ""
 echo "=============== STEP 4: Main VLA Flow Matching Training ==============="
-echo "Loading pre-trained sensor and robot state encoders." 
+echo "Loading pre-trained encoders:"
+echo "  - Robot State: Fourier Feature + Absolute representation"
+echo "  - Sensor: CLIP-trained encoder"
 echo "Using DeepSpeed ZeRO-2."
 echo "With cache enabled, training will be MUCH faster!"
 echo ""
@@ -315,31 +269,31 @@ echo ""
 # Note: This example trains on a single dataset for simplicity.
 # For multi-dataset training, add more paths to --dataset_paths.
 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
-CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --num_gpus=$NUM_GPUS \
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --num_gpus=4 \
     TRAIN_FlowMatching.py \
     --deepspeed_config configs/deepspeed_zero2_offload.json \
-    --dataset_paths "${DATASET_PATHS_ALL[@]}" \
-    --epochs 50 \
-    --batch_size 64 \
+    --dataset_paths "/home/najo/NAS/VLA/dataset/New_dataset6/Red_point" "/home/najo/NAS/VLA/dataset/New_dataset6/Blue_point" "/home/najo/NAS/VLA/dataset/New_dataset6/Green_point" "/home/najo/NAS/VLA/dataset/New_dataset6/White_point" "/home/najo/NAS/VLA/dataset/New_dataset6/Yellow_point" \
+    --epochs 5 \
+    --batch_size 16 \
     --grad_accum 1 \
     --lr 1e-4 \
     --min_lr 1e-7 \
     --image_resize_height 360 \
     --image_resize_width 640 \
     --sensor_enabled \
-    --num_workers 8 \
+    --num_workers 4 \
     --fusion_strategy "cross_attention" \
     --finetune_vl none \
     --val_split 0.05 \
-    --load_robot_state_encoder_checkpoint "$CHECKPOINT_DIR/robot_state_mae_best_delta.pth" \
-    --load_sensor_encoder_checkpoint "$CHECKPOINT_DIR/sensor_clip_best.pth" \
     --action_expert_hidden_dim 1024 \
     --vlm_reuse_count 1 \
-    --cache_root "$CACHE_ROOT/qwen_vl_features" \
-    --use_cache --freeze_sensor_encoder --skip_dataset_stats 
-    # --filter_by_cache --debug_mode
+    --load_robot_state_encoder_checkpoint "./checkpoints/robot_state_mae_latest.pth" \
+    --load_sensor_encoder_checkpoint "./checkpoints/sensor_clip_best.pth" \
+    --cache_root "/home/najo/NAS/VLA/dataset/cache/qwen_vl_features" \
+    --use_cache --freeze_sensor_encoder --skip_dataset_stats
+    # --debug_mode
+    
     # --resume "/home/najo/NAS/VLA/Insertion_VLAv3/checkpoints/flow_matching_best.pt" \
-
 echo "=============== VLA Training Complete ==============="
 echo ""
 

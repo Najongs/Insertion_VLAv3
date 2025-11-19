@@ -71,6 +71,68 @@ def force_bn_fp32_(module: torch.nn.Module):
         if isinstance(m, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)):
             m.float()  # 가중치/편향 및 러닝 통계 모두 FP32로
 
+class FourierFeatureProjection(nn.Module):
+    """
+    Fourier Feature Projection for better capturing fine-grained details.
+
+    Transforms input through sin/cos functions at multiple frequencies to help
+    the network better represent high-frequency variations in robot states.
+
+    Args:
+        input_dim: Input feature dimension
+        output_dim: Output feature dimension (will be doubled after sin/cos concat)
+        num_frequencies: Number of frequency bands to use
+        learnable: Whether frequency scales are learnable or fixed
+    """
+    def __init__(self, input_dim: int, output_dim: int, num_frequencies: int = 16, learnable: bool = False):
+        super().__init__()
+        self.input_dim = input_dim
+        self.num_frequencies = num_frequencies
+
+        # Initialize frequency scales (log-spaced from 1 to 2^(num_frequencies-1))
+        if learnable:
+            self.frequency_scales = nn.Parameter(
+                torch.logspace(0, num_frequencies - 1, num_frequencies, base=2.0)
+            )
+        else:
+            self.register_buffer(
+                'frequency_scales',
+                torch.logspace(0, num_frequencies - 1, num_frequencies, base=2.0)
+            )
+
+        # Linear projection after Fourier features
+        # Input will be: input_dim * num_frequencies * 2 (sin + cos)
+        fourier_dim = input_dim * num_frequencies * 2
+        self.projection = nn.Linear(fourier_dim, output_dim)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x: Input tensor of shape (B, T, D_in)
+        Returns:
+            Projected tensor of shape (B, T, D_out)
+        """
+        B, T, D = x.shape
+
+        # Expand input: (B, T, D) -> (B, T, D, 1)
+        x_expanded = x.unsqueeze(-1)
+
+        # Apply frequency scaling: (B, T, D, num_freq)
+        scaled = x_expanded * self.frequency_scales.view(1, 1, 1, -1) * (2 * torch.pi)
+
+        # Apply sin and cos
+        sin_features = torch.sin(scaled)  # (B, T, D, num_freq)
+        cos_features = torch.cos(scaled)  # (B, T, D, num_freq)
+
+        # Concatenate and flatten: (B, T, D * num_freq * 2)
+        fourier_features = torch.cat([sin_features, cos_features], dim=-1)
+        fourier_features = fourier_features.reshape(B, T, -1)
+
+        # Project to output dimension
+        output = self.projection(fourier_features)
+        return output
+
+
 # ==============================================================================
 # 2. 인코더 모듈 (Encoder Modules)
 #    - 로봇 상태 인코더 (RobotStateEncoder)
@@ -90,14 +152,27 @@ class RobotStateEncoder(nn.Module):
                 num_heads: int = 8,
                 num_layers: int = 6,
                 temporal_length: int = 60,
-                dropout: float = 0.1):
+                dropout: float = 0.1,
+                use_fourier_features: bool = True,
+                num_frequencies: int = 8):
         super().__init__()
         self.input_dim = input_dim
         self.model_dim = model_dim
         self.output_dim = output_dim
+        self.temporal_length = temporal_length
 
         # 1. 입력 투영 (Input Projection): 원시 로봇 상태를 모델 차원으로 매핑
-        self.input_proj = nn.Linear(input_dim, model_dim)
+        if use_fourier_features:
+            # Use Fourier Feature Projection for better high-frequency detail capture
+            self.input_proj = FourierFeatureProjection(
+                input_dim=input_dim,
+                output_dim=model_dim,
+                num_frequencies=num_frequencies,
+                learnable=False
+            )
+        else:
+            # Fallback to simple linear projection
+            self.input_proj = nn.Linear(input_dim, model_dim)
 
         # 2. 위치 인코딩 (Positional Encoding): 시계열 데이터의 시간적 순서 정보 제공
         self.pos_encoder = nn.Parameter(torch.zeros(1, temporal_length, model_dim))
@@ -114,8 +189,9 @@ class RobotStateEncoder(nn.Module):
         )
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
 
-        # 4. Temporal Pooling 및 Projection Head: 시계열 특징을 고정 길이 벡터로 압축하고 최종 출력 차원으로 매핑
-        self.temporal_pool = nn.AdaptiveAvgPool1d(1) # 시간 축 평균 풀링
+        # 4. Projection Head: Last Token 방식으로 시계열 특징을 고정 길이 벡터로 변환하고 최종 출력 차원으로 매핑
+        # Note: Last Token pooling is now used instead of Average Pooling
+        # for better capturing recent state and trend information
         self.projection = nn.Sequential(
             nn.Linear(model_dim, output_dim),
             nn.LayerNorm(output_dim),
@@ -140,9 +216,25 @@ class RobotStateEncoder(nn.Module):
                           return_sequence가 False이면 (B, D_out) 형태,
                           True이면 (B, T, model_dim) 형태입니다.
         """
+        B, T, D = src.shape
+
         # 입력 투영 및 위치 인코딩 추가
         x = self.input_proj(src) # (B, T, model_dim)
-        x = x + self.pos_encoder # 위치 인코딩 더하기
+
+        # 위치 인코딩을 입력 길이에 맞춰 슬라이싱 (가변 길이 대응)
+        # 입력이 temporal_length보다 짧으면 앞부분만 사용, 길면 보간(interpolate) 사용
+        if T <= self.temporal_length:
+            pos_encoding = self.pos_encoder[:, :T, :]  # (1, T, model_dim)
+        else:
+            # 입력이 더 길면 positional encoding을 보간하여 맞춤
+            pos_encoding = F.interpolate(
+                self.pos_encoder.transpose(1, 2),  # (1, model_dim, temporal_length)
+                size=T,
+                mode='linear',
+                align_corners=False
+            ).transpose(1, 2)  # (1, T, model_dim)
+
+        x = x + pos_encoding  # 위치 인코딩 더하기
         x = self.dropout(x)
 
         # 트랜스포머 통과
@@ -152,10 +244,10 @@ class RobotStateEncoder(nn.Module):
         if return_sequence:
             return x
 
-        # 다운스트림 작업을 위한 풀링 및 투영
-        pooled_x = x.transpose(1, 2) # (B, model_dim, T) 형태로 변경하여 1D 풀링 준비
-        pooled_x = self.temporal_pool(pooled_x).squeeze(-1) # (B, model_dim)
-        output_features = self.projection(pooled_x) # (B, output_dim)
+        # 다운스트림 작업을 위한 Last Token Pooling 및 투영
+        # Last Token approach: 가장 최근 타임스텝의 정보를 사용 (현재 상태와 추세 반영)
+        last_token = x[:, -1, :]  # (B, model_dim) - 마지막 토큰 선택
+        output_features = self.projection(last_token)  # (B, output_dim)
 
         return output_features
 

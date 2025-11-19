@@ -1080,7 +1080,7 @@ def main():
         sensor_temporal_length=65,
         sensor_output_dim=512,
         robot_state_enabled=args.sensor_enabled,
-        robot_state_output_dim=1024, # Match pre-training architecture
+        robot_state_output_dim=512, # Match pre-training architecture
         finetune_vl=args.finetune_vl,
         action_expert_hidden_dim=args.action_expert_hidden_dim,
         image_resize_height=args.image_resize_height, image_resize_width=args.image_resize_width,
@@ -1308,6 +1308,30 @@ def main():
             ckpt = torch.load(str(resume_path), map_location='cpu')
             state_dict = ckpt.get("model_state_dict", ckpt)
 
+            # Filter out encoder keys if encoder checkpoints are provided
+            # This allows loading Action Decoder from resume while keeping encoders from their own checkpoints
+            exclude_prefixes = []
+            if args.load_sensor_encoder_checkpoint and os.path.exists(args.load_sensor_encoder_checkpoint):
+                exclude_prefixes.append('sensor_encoder.')
+                if rank == 0:
+                    print(f"   🔒 Excluding 'sensor_encoder.*' from resume (using separate checkpoint)")
+            if args.load_robot_state_encoder_checkpoint and os.path.exists(args.load_robot_state_encoder_checkpoint):
+                exclude_prefixes.append('robot_state_encoder.')
+                if rank == 0:
+                    print(f"   🔒 Excluding 'robot_state_encoder.*' from resume (using separate checkpoint)")
+
+            if exclude_prefixes:
+                filtered_state_dict = {}
+                excluded_count = 0
+                for k, v in state_dict.items():
+                    if any(k.startswith(prefix) for prefix in exclude_prefixes):
+                        excluded_count += 1
+                        continue
+                    filtered_state_dict[k] = v
+                state_dict = filtered_state_dict
+                if rank == 0:
+                    print(f"   ℹ️ Excluded {excluded_count} encoder parameters from resume checkpoint")
+
             # Handle positional encoding size mismatch (65 -> 100)
             if 'robot_state_encoder.pos_encoder' in state_dict:
                 pretrained_pos_enc = state_dict['robot_state_encoder.pos_encoder']
@@ -1330,7 +1354,7 @@ def main():
                     print(f"   ⚠️ Missing keys: {len(missing)}")
                 if unexpected:
                     print(f"   ⚠️ Unexpected keys: {len(unexpected)}")
-                print(f"   ✅ Model weights loaded")
+                print(f"   ✅ Model weights loaded (Action Decoder + VLM)")
 
                 # Try to resume epoch if available
                 if "epoch" in ckpt:

@@ -186,10 +186,12 @@ class QwenVLAUnified(nn.Module):
             self.sensor_encoder = None
 
         if self.robot_state_enabled:
-            print("   로봇 상태 인코더: Upgraded RobotStateEncoder (bfloat16 ~41MB)")
+            print("   로봇 상태 인코더: Upgraded RobotStateEncoder with Fourier Features (bfloat16 ~41MB)")
             self.robot_state_encoder = RobotStateEncoder(
                 temporal_length=robot_state_temporal_length,
-                output_dim=robot_state_output_dim
+                output_dim=robot_state_output_dim,
+                use_fourier_features=True,  # Enable Fourier Feature Projection
+                num_frequencies=8           # 8 frequency bands for high-frequency detail
             ).to(dtype=torch.bfloat16, device="cuda")
         else:
             self.robot_state_encoder = None

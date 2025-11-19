@@ -1,26 +1,26 @@
 {
   "linear_probe": {
-    "accuracy": 0.995,
-    "precision": 1.0,
-    "recall": 0.967741935483871,
-    "f1": 0.9836065573770492,
-    "roc_auc": 0.999856842908952,
+    "accuracy": 0.97,
+    "precision": 0.9433962264150944,
+    "recall": 0.847457627118644,
+    "f1": 0.8928571428571429,
+    "roc_auc": 0.9938863760624286,
     "tn": 338.0,
-    "fp": 0.0,
-    "fn": 2.0,
-    "tp": 60.0,
+    "fp": 3.0,
+    "fn": 9.0,
+    "tp": 50.0,
     "confusion_matrix": [
       [
         338,
-        0
+        3
       ],
       [
-        2,
-        60
+        9,
+        50
       ]
     ]
   },
-  "ami_contact_vs_cluster": -0.0001249126894691863,
+  "ami_contact_vs_cluster": 0.13686632197677542,
   "num_samples": 2000,
   "contact_threshold": 0.85
 }
