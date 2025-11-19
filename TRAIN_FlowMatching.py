@@ -34,6 +34,54 @@ Flow Matching VLA Training Script with Sensor Integration
         * instruction을 변경하면 prompt_hash도 변경되어 캐시를 찾을 수 없음
         * 캐시 생성과 학습 시 동일한 vlm_reuse_count 사용 필수
 
+5.  **🔥🔥 VL 캐시 생성 트러블슈팅 및 최적화 (2025-11-18) 🔥🔥:**
+
+    **⚠️ 문제 1: Tuple Detach 에러**
+    -   **증상:** `'tuple' object has no attribute 'detach'` 에러 발생
+    -   **원인:** `torch.split()`이 반환하는 tuple을 캐시 저장 시 직접 `.detach()` 호출
+    -   **해결:** `models/vl_cache.py`의 `save_cache()` 메서드에 `flatten_to_tensor()` 재귀 함수 추가
+        * 중첩된 tuple/list 구조를 재귀적으로 탐색
+        * 각 텐서를 개별적으로 detach 및 CPU로 이동
+        * 원본 데이터 구조(tuple/list/dict) 유지
+
+    **⚠️ 문제 2: 비어있는 Image Features (torch.Size([1, 0, 2048]))**
+    -   **증상:** VL 캐시의 image_features가 비어있음 (seq_len=0)
+    -   **원인:** 잘못된 토큰 ID(151857)를 사용하여 비전 토큰 추출 시도
+    -   **Qwen2.5-VL의 실제 토큰 구조:**
+        * `<|vision_start|>` (151652): 비전 시퀀스 시작 마커
+        * `<|image_pad|>` (151655): VLM이 실제 이미지 패치 임베딩으로 확장하는 플레이스홀더
+        * `<|vision_end|>` (151653): 비전 시퀀스 종료 마커
+    -   **해결:** `models/vl_encoder.py`의 이미지 토큰 추출 로직 완전 재작성
+        * `<|vision_start|>`와 `<|vision_end|>` 위치 찾기
+        * 두 마커 **사이의 모든** hidden states 추출 (특정 토큰 ID가 아님!)
+        * 결과: 1320개의 이미지 패치 성공 추출 (264 patches × 5 views)
+
+    **⚠️ 문제 3: 손상된 캐시 파일로 인한 Concatenation 에러**
+    -   **증상:** 텐서 크기 불일치 (`[1, 0, 2048]` vs `[1, 1320, 2048]`)
+    -   **원인:** 비전 토큰 추출 버그 수정 전에 생성된 invalid 캐시가 남아있음
+    -   **해결:** `clean_invalid_cache.py` 유틸리티 생성
+        * 모든 `.pt` 캐시 파일 검사
+        * `image_features.shape[1] == 0`인 파일만 선택적 삭제
+        * Dry-run 모드로 먼저 확인 후 삭제 가능
+
+    **✅ 최종 최적화: 학습 전 완전 캐싱 전략 (TOTAL_TRAIN.sh)**
+    -   **기존 문제:** 학습 중 cache backfill로 인한 속도 저하 및 GPU 메모리 낭비
+    -   **해결책:**
+        * **STEP 2.5:** Invalid 캐시 검사 및 정리 (사용자 확인 후 삭제)
+        * **STEP 3:** 학습 전 100% 캐시 생성 (`--mode cache`, `vlm_reuse_count=1`)
+        * **STEP 4:** 완전한 캐시로 빠른 학습 (`--use_cache --filter_by_cache --freeze_encoders`)
+    -   **장점:**
+        * 학습 중 VLM 로드 불필요 → 메모리 절약
+        * Cache miss 없음 → 안정적이고 빠른 학습
+        * 한 번 생성한 캐시는 여러 학습 실행에서 재사용 가능
+
+    **🚨 중요 체크리스트:**
+    1. ✅ `models/vl_cache.py`에서 `flatten_to_tensor()` 구현 확인
+    2. ✅ `models/vl_encoder.py`에서 비전 토큰을 마커 사이 전체 시퀀스로 추출
+    3. ✅ 학습 전 `clean_invalid_cache.py`로 손상된 캐시 제거
+    4. ✅ `TOTAL_TRAIN.sh`에서 STEP 3으로 완전 캐싱 후 STEP 4로 학습
+    5. ✅ 캐시 생성과 학습 시 동일한 `vlm_reuse_count` 사용 (일반적으로 1 또는 3)
+
 ---
 Original Docstring:
 Flow Matching VLA Training Script with Sensor Integration
@@ -245,6 +293,137 @@ def _sync_cache_stats(hits, total, device):
         return stats[0].item(), stats[1].item()
     return float(hits), float(total)
 
+
+def validate_cache_file(cache_path: Path, verbose: bool = False):
+    """
+    Validate a single cache file.
+    Returns: (is_valid, error_message, cache_info)
+    """
+    try:
+        cache_data = torch.load(cache_path, map_location='cpu')
+
+        # Check if cache has required keys
+        required_keys = ['image_features', 'text_features']
+        missing_keys = [k for k in required_keys if k not in cache_data]
+        if missing_keys:
+            return False, f"Missing keys: {missing_keys}", None
+
+        # Check image_features
+        image_features = cache_data['image_features']
+        if isinstance(image_features, (list, tuple)):
+            # Handle tuple/list of tensors
+            total_elements = sum(f.numel() if isinstance(f, torch.Tensor) else 0 for f in image_features)
+            if total_elements == 0:
+                return False, "Empty image_features (all tensors have 0 elements)", None
+            shapes = [f.shape if isinstance(f, torch.Tensor) else None for f in image_features]
+        elif isinstance(image_features, torch.Tensor):
+            if image_features.numel() == 0 or image_features.shape[1] == 0:
+                return False, f"Empty image_features tensor: {image_features.shape}", None
+            shapes = [image_features.shape]
+        else:
+            return False, f"Invalid image_features type: {type(image_features)}", None
+
+        cache_info = {
+            'file': cache_path.name,
+            'image_features_shapes': shapes,
+            'text_features_shape': cache_data['text_features'].shape if isinstance(cache_data['text_features'], torch.Tensor) else None,
+            'size_mb': cache_path.stat().st_size / 1024 / 1024,
+        }
+
+        if verbose:
+            print(f"✅ Valid: {cache_path.name}")
+            print(f"   Image features: {shapes}")
+            print(f"   Text features: {cache_info['text_features_shape']}")
+            print(f"   Size: {cache_info['size_mb']:.2f} MB")
+
+        return True, None, cache_info
+
+    except Exception as e:
+        return False, f"Load error: {str(e)}", None
+
+
+def validate_all_caches(cache_root: Path, rank: int = 0, verbose: bool = True):
+    """
+    Validate all cache files in cache_root directory.
+    Returns summary statistics.
+    """
+    if rank != 0:
+        return None
+
+    if not cache_root.exists():
+        print(f"❌ Cache directory does not exist: {cache_root}")
+        return None
+
+    print(f"\n{'='*80}")
+    print(f"🔍 CACHE VALIDATION REPORT")
+    print(f"{'='*80}")
+    print(f"Cache root: {cache_root}")
+
+    # Find all .pt files
+    cache_files = list(cache_root.rglob("*.pt"))
+
+    if not cache_files:
+        print(f"⚠️ No cache files found in {cache_root}")
+        return None
+
+    print(f"Found {len(cache_files)} cache files\n")
+
+    valid_files = []
+    invalid_files = []
+    total_size_mb = 0
+
+    # Group by prompt_hash directory
+    by_prompt_hash = {}
+    for cache_file in cache_files:
+        prompt_hash = cache_file.parent.name
+        if prompt_hash not in by_prompt_hash:
+            by_prompt_hash[prompt_hash] = []
+        by_prompt_hash[prompt_hash].append(cache_file)
+
+    print(f"📁 Cache organized by {len(by_prompt_hash)} prompt_hash directories:")
+    for prompt_hash, files in by_prompt_hash.items():
+        print(f"   {prompt_hash}: {len(files)} files")
+    print()
+
+    # Validate each file
+    for cache_file in tqdm(cache_files, desc="Validating caches", disable=(not verbose)):
+        is_valid, error_msg, cache_info = validate_cache_file(cache_file, verbose=False)
+
+        if is_valid:
+            valid_files.append(cache_file)
+            total_size_mb += cache_info['size_mb']
+        else:
+            invalid_files.append((cache_file, error_msg))
+            if verbose:
+                print(f"❌ Invalid: {cache_file.relative_to(cache_root)}")
+                print(f"   Error: {error_msg}")
+
+    # Print summary
+    print(f"\n{'='*80}")
+    print(f"📊 VALIDATION SUMMARY")
+    print(f"{'='*80}")
+    print(f"Total files:        {len(cache_files)}")
+    print(f"✅ Valid files:     {len(valid_files)} ({len(valid_files)/len(cache_files)*100:.1f}%)")
+    print(f"❌ Invalid files:   {len(invalid_files)} ({len(invalid_files)/len(cache_files)*100:.1f}%)")
+    print(f"💾 Total size:      {total_size_mb:.2f} MB")
+    print(f"{'='*80}\n")
+
+    if invalid_files:
+        print(f"⚠️ Invalid cache files found:")
+        for cache_file, error_msg in invalid_files[:10]:  # Show first 10
+            print(f"   {cache_file.relative_to(cache_root)}: {error_msg}")
+        if len(invalid_files) > 10:
+            print(f"   ... and {len(invalid_files) - 10} more")
+        print()
+
+    return {
+        'total': len(cache_files),
+        'valid': len(valid_files),
+        'invalid': len(invalid_files),
+        'total_size_mb': total_size_mb,
+        'invalid_files': invalid_files,
+    }
+
 # ===========================================================
 # 초기화
 # ===========================================================
@@ -419,6 +598,11 @@ def Train_FlowMatching(
         epoch_cache_total = 0
 
         model_engine.train()
+
+        if rank == 0:
+            print(f"\n{'='*60}")
+            print(f"📚 Epoch {epoch+1}/{start_epoch + num_epochs}")
+            print(f"{'='*60}")
 
         pbar = tqdm(enumerate(data_loader), total=len(data_loader),
                     desc=f"[Rank {rank}] Epoch {epoch+1}",
@@ -596,6 +780,7 @@ def Train_FlowMatching(
             gc.collect()
 
             lr = model_engine.get_lr()[0] if isinstance(model_engine, deepspeed.DeepSpeedEngine) else optimizer.param_groups[0]['lr']
+            world_size = dist.get_world_size() if dist.is_initialized() else 1
             log_dict = {
                 "epoch": epoch + 1,
                 "train/loss_epoch": avg_loss,
@@ -607,7 +792,9 @@ def Train_FlowMatching(
                 "system/cpu_mem_%": cpu_mem,
                 "lr/base_lr": lr,
                 "train/cache_hit_ratio": cache_hit_ratio,
-                "train/cache_samples": synced_total,
+                "train/processed_samples_epoch": synced_total,
+                "dataset/total_samples": len(data_loader.dataset),
+                "dataset/total_batches": len(data_loader) * world_size,
             }
 
             if sensor_enabled:
@@ -701,7 +888,9 @@ def main():
                         help='Path to pre-trained sensor encoder checkpoint.')
     parser.add_argument('--load_robot_state_encoder_checkpoint', type=str, default='./checkpoints/robot_state_mae_best.pth',
                         help='Path to pre-trained robot state encoder checkpoint.')
-    parser.add_argument('--freeze_encoders', action='store_true', help='Freeze sensor and robot state encoders after loading weights.')
+    parser.add_argument('--freeze_encoders', action='store_true', help='Freeze both sensor and robot state encoders after loading weights.')
+    parser.add_argument('--freeze_sensor_encoder', action='store_true', help='Freeze only the sensor encoder.')
+    parser.add_argument('--freeze_robot_state_encoder', action='store_true', help='Freeze only the robot state encoder.')
 
     # Data augmentation
     parser.add_argument('--use_augmentation', action='store_true', help='Enable minimal image augmentation (only works without cache)')
@@ -721,10 +910,12 @@ def main():
     parser.add_argument('--vlm_reuse_count', type=int, default=3, help='Number of frames to share a single VLM feature. Set to 1 for 100%% cache generation.')
     parser.add_argument('--cache_loader_only', action='store_true', help='Use lightweight dataloader optimized for cache building')
     parser.add_argument('--skip_dataset_stats', action='store_true', help='Skip dataset statistics collection and printing (faster startup)')
+    parser.add_argument('--debug_mode', action='store_true', help='Enable verbose VL/cache debug logging')
 
     # DeepSpeed args
     parser.add_argument('--deepspeed_config', type=str, default='configs/deepspeed_zero2.json',
                         help='Path to DeepSpeed config file')
+    parser.add_argument('--action_expert_hidden_dim', type=int, default=1024, help='Hidden dimension of the action expert.')
     parser.add_argument('--local_rank', type=int, default=-1, help='Local rank for distributed training (set by DeepSpeed)')
 
     args = parser.parse_args()
@@ -745,7 +936,20 @@ def main():
     # Cache build mode
     if args.mode == 'cache':
         if rank == 0:
-            print("--- Starting VL Cache Building ---")
+            print("\n" + "="*80)
+            print("🏗️  STARTING VL CACHE BUILDING")
+            print("="*80)
+            print(f"Cache root: {cache_dir}")
+            print(f"VLM reuse count: {args.vlm_reuse_count}")
+            print(f"Batch size: {args.batch_size}")
+            print(f"Num workers: {args.num_workers}")
+            print(f"Debug mode: {args.debug_mode}")
+            print("="*80 + "\n")
+
+        # Count existing caches before building
+        if rank == 0:
+            existing_caches = list(cache_dir.rglob("*.pt")) if cache_dir.exists() else []
+            print(f"📦 Existing cache files: {len(existing_caches)}\n")
 
         # 1. Dataloader (use_cache=False is crucial)
         train_loader, _ = build_dataloaders(
@@ -757,6 +961,9 @@ def main():
         )
 
         # 2. Model (needed for its processor and VL model)
+        if rank == 0:
+            print("⏳ Loading VL model for cache generation...")
+
         model = QwenVLAUnified(
             model_type='flow_matching', vl_model_name=vl_model_name, action_dim=7, horizon=8,
             hidden_dim=1024, sensor_enabled=False, # Sensor data not needed for VL cache
@@ -764,12 +971,18 @@ def main():
             image_resize_height=args.image_resize_height, image_resize_width=args.image_resize_width,
             device_map=None,
             external_cache_root=args.cache_root,
+            debug_mode=args.debug_mode,
         )
         model = model.to(device)
-        
+
         # Pass cache_dir to the model so the builder can find it
         # This is a bit of a hack, but it's how the cache builder is designed
         model.cache_dir = cache_dir
+
+        if rank == 0:
+            print("✅ VL model loaded\n")
+            print(f"🚀 Starting cache generation for {len(train_loader.dataset)} samples...")
+            print(f"   Expected VLM forward passes: ~{len(train_loader.dataset) // args.vlm_reuse_count}\n")
 
         # 3. Run the cache building process
         build_vl_cache_distributed_optimized(
@@ -780,45 +993,101 @@ def main():
             num_workers=args.num_workers,
         )
 
+        # Ensure all processes sync up before validation
+        if dist.is_initialized():
+            dist.barrier()
+
+        # 4. Validate generated caches
         if rank == 0:
-            print("--- VL Cache Building Complete ---")
-        
+            print("\n" + "="*80)
+            print("✅ CACHE BUILDING COMPLETE")
+            print("="*80)
+
+            # Count new caches
+            all_caches = list(cache_dir.rglob("*.pt")) if cache_dir.exists() else []
+            new_caches = len(all_caches) - len(existing_caches)
+            print(f"📦 Total cache files: {len(all_caches)} (+{new_caches} new)")
+            print()
+
+            # Validate all caches
+            validation_results = validate_all_caches(
+                cache_root=cache_dir,
+                rank=rank,
+                verbose=True
+            )
+
+            # Show recommendation
+            if validation_results and validation_results['invalid'] > 0:
+                print("⚠️  RECOMMENDATION:")
+                print(f"   Run clean_invalid_cache.py to remove {validation_results['invalid']} invalid cache files")
+                print(f"   Command: python clean_invalid_cache.py --cache_root {cache_dir}")
+            elif validation_results:
+                print("✨ All cache files are valid! Ready for training.")
+
+            print("="*80 + "\n")
+
         # Ensure all processes sync up before exiting
         if dist.is_initialized():
             dist.barrier()
-        
+
         return
 
     # Training mode
     if rank == 0:
-        print(f"⚠️ [주의] VL 캐시 검사를 건너뜁니다.")
-        print(f"   캐시 경로: {cache_dir}")
-        if not cache_dir.exists() or not any(cache_dir.iterdir()):
-            print(f"   [경고!] 캐시 디렉토리가 비어있거나 존재하지 않습니다!")
+        print("\n" + "="*80)
+        print("🎓 STARTING TRAINING MODE")
+        print("="*80)
+        print(f"Cache root: {cache_dir}")
+        print(f"Use cache: {args.use_cache}")
+        print(f"Filter by cache: {args.filter_by_cache}")
+
+        # Check cache status
+        if args.use_cache:
+            if cache_dir.exists():
+                cache_files = list(cache_dir.rglob("*.pt"))
+                print(f"📦 Found {len(cache_files)} cache files")
+
+                # Run quick validation in debug mode
+                if args.debug_mode:
+                    print("\n🔍 Running cache validation (debug mode enabled)...")
+                    validation_results = validate_all_caches(
+                        cache_root=cache_dir,
+                        rank=rank,
+                        verbose=True
+                    )
+                    if validation_results and validation_results['invalid'] > 0:
+                        print(f"\n⚠️  WARNING: Found {validation_results['invalid']} invalid cache files!")
+                        print(f"   Consider running: python clean_invalid_cache.py --cache_root {cache_dir}\n")
+            else:
+                print(f"⚠️  WARNING: Cache directory does not exist!")
+                print(f"   Run with --mode cache first to generate caches\n")
+        else:
+            print("⚠️  Cache disabled - VLM will run in real-time (slower)")
+
+        print("="*80 + "\n")
 
     train_loader, val_loader = build_dataloaders(args, rank, world_size, use_cache=args.use_cache, cache_build_only=args.cache_loader_only)
 
     if rank == 0: print("⏳ Initializing model for training...")
 
-    # Cache 사용 시 VLM 로드 스킵 (메모리 절약)
-    use_cache_only_mode = args.use_cache and args.finetune_vl == 'none'
+    # Cache 사용 시 VLM 로드 스킵 (메모리 절약). filter_by_cache가 활성화되어 캐시 누락이 없을 때만 사용.
+    use_cache_only_mode = args.use_cache and args.finetune_vl == 'none' and args.filter_by_cache
 
     model = QwenVLAUnified(
         model_type='flow_matching', vl_model_name=vl_model_name, action_dim=7, horizon=8,
         hidden_dim=1024, sensor_enabled=args.sensor_enabled,
-        sensor_encoder_type='force_aware', # Match pre-training architecture
         sensor_input_channels=1026,
         sensor_temporal_length=65,
-        sensor_hidden_dim=args.sensor_hidden_dim,  # Conv backbone channels
-        sensor_output_dim=1024,
-        sensor_transformer_dim=args.sensor_transformer_dim,  # Transformer projection
+        sensor_output_dim=512,
         robot_state_enabled=args.sensor_enabled,
         robot_state_output_dim=1024, # Match pre-training architecture
         finetune_vl=args.finetune_vl,
+        action_expert_hidden_dim=args.action_expert_hidden_dim,
         image_resize_height=args.image_resize_height, image_resize_width=args.image_resize_width,
         device_map=None,
         external_cache_root=args.cache_root,
         cache_only_mode=use_cache_only_mode,  # VLM freeze + cache 사용 시 VLM 로드 스킵
+        debug_mode=args.debug_mode,
     )
     model = model.to(device)
 
@@ -885,14 +1154,29 @@ def main():
                 print(f"   ⚠️ Unexpected keys in RobotStateEncoder: {unexpected_keys}")
             print("✅ RobotStateEncoder weights loaded.")
 
+    # Determine per-encoder freeze configuration
+    freeze_sensor_encoder = args.freeze_encoders or args.freeze_sensor_encoder
+    freeze_robot_encoder = args.freeze_encoders or args.freeze_robot_state_encoder
+
     # Freeze encoders BEFORE DeepSpeed initialization
-    if args.freeze_encoders:
-        if rank == 0: print("🧊 Freezing Sensor and Robot State Encoders...")
-        for param in model.sensor_encoder.parameters():
-            param.requires_grad = False
-        for param in model.robot_state_encoder.parameters():
-            param.requires_grad = False
-        if rank == 0: print("✅ Encoders frozen.")
+    if freeze_sensor_encoder or freeze_robot_encoder:
+        if rank == 0:
+            msg = []
+            if freeze_sensor_encoder:
+                msg.append("Sensor")
+            if freeze_robot_encoder:
+                msg.append("RobotState")
+            print(f"🧊 Freezing {' & '.join(msg)} Encoder(s)...")
+
+        if freeze_sensor_encoder:
+            for param in model.sensor_encoder.parameters():
+                param.requires_grad = False
+        if freeze_robot_encoder:
+            for param in model.robot_state_encoder.parameters():
+                param.requires_grad = False
+
+        if rank == 0:
+            print("✅ Selected encoders frozen.")
 
     # When doing LoRA fine-tuning, freeze everything except VLM (Action Expert included)
     if args.finetune_vl == 'lora':
@@ -900,11 +1184,14 @@ def main():
         for param in model.action_expert.parameters():
             param.requires_grad = False
         # Also freeze sensor encoders if not already frozen
-        if not args.freeze_encoders:
+        if not freeze_sensor_encoder:
             for param in model.sensor_encoder.parameters():
                 param.requires_grad = False
+            freeze_sensor_encoder = True
+        if not freeze_robot_encoder:
             for param in model.robot_state_encoder.parameters():
                 param.requires_grad = False
+            freeze_robot_encoder = True
         if rank == 0: print("✅ Action Expert frozen. Only VLM LoRA adapters are trainable.")
 
     # Sync all processes before deepspeed.initialize() to prevent timeouts

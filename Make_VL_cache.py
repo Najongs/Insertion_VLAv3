@@ -28,9 +28,9 @@ def build_vl_cache_distributed_optimized(
     dataset,
     device="cuda",
     *,
-    batch_size=16,          # DataLoader 배치 (VRAM 24GB면 2~4 권장)
-    num_workers=8,
-    prefetch_factor=4,
+    batch_size=16,          # DataLoader 배치 (VRAM 24GB면 높일 수 있음)
+    num_workers=4,
+    prefetch_factor=4,      # ✅ 4 → 8로 증가 (더 많이 미리 로드)
     micro_bs=1,            # 마이크로 배치 (OOM 시 자동 백오프)
     cache_dir_fallback="/home/najo/NAS/VLA/dataset/cache/qwen_vl_features",
 ):
@@ -85,8 +85,8 @@ def build_vl_cache_distributed_optimized(
         shuffle=False if sampler else False,
         collate_fn=unified_collate_fn,
         prefetch_factor=prefetch_factor if num_workers > 0 else None,
-        pin_memory=False,
-        persistent_workers=False,
+        pin_memory=True,              # ✅ GPU 전송 속도 향상
+        persistent_workers=True,       # ✅ 워커 재사용으로 오버헤드 감소
     )
 
     total_local = math.ceil(len(dataset) / world_size)
@@ -204,10 +204,27 @@ def build_vl_cache_distributed_optimized(
                             
                             image_outputs = model.vl_model(**image_only_inputs, output_hidden_states=True, return_dict=True)
                             image_hidden_state = image_outputs.hidden_states[-1]
-                            
-                            image_token_mask = (image_only_inputs['input_ids'] == 151857)
-                            image_indices = torch.where(image_token_mask.squeeze(0))[0]
-                            image_features = image_hidden_state[:, image_indices, :]
+
+                            # ✅ FIX: Extract image patches between <|vision_start|> and <|vision_end|> markers
+                            # Qwen2.5-VL special tokens:
+                            # <|vision_start|> = 151652
+                            # <|vision_end|> = 151653
+                            # <|image_pad|> (151655) is expanded into actual image patch embeddings by VLM
+                            input_ids_flat = image_only_inputs['input_ids'].squeeze(0)
+                            vision_start_positions = torch.where(input_ids_flat == 151652)[0]
+                            vision_end_positions = torch.where(input_ids_flat == 151653)[0]
+
+                            # Collect all image patch tokens between vision markers
+                            image_patch_indices = []
+                            for start_pos, end_pos in zip(vision_start_positions, vision_end_positions):
+                                patch_indices = torch.arange(start_pos + 1, end_pos, device=input_ids_flat.device)
+                                image_patch_indices.append(patch_indices)
+
+                            if image_patch_indices:
+                                image_patch_indices = torch.cat(image_patch_indices)
+                                image_features = image_hidden_state[:, image_patch_indices, :]
+                            else:
+                                image_features = torch.empty(1, 0, model.vl_model.config.hidden_size, device=device, dtype=torch.bfloat16)
                         else:
                             image_features = torch.empty(1, 0, model.vl_model.config.hidden_size, device=device, dtype=torch.bfloat16)
 

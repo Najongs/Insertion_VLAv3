@@ -92,23 +92,61 @@ class VLACacheManager:
         dataset_name: str,
         vlm_idx: int,
         prompt_hash: str,
-        vl_features: torch.Tensor,
+        vl_features: torch.Tensor | tuple | list | dict,
     ):
         """
         특정 프롬프트 해시에 대한 캐시를 Atomic하게 저장합니다.
+        단일 텐서, 튜플, 리스트, 딕셔너리를 모두 처리합니다.
         """
         cache_path = self.get_cache_path(dataset_name, vlm_idx, prompt_hash)
 
+        # Process different input types
+        def flatten_to_tensor(item, depth=0):
+            """Helper to extract tensor from potentially nested tuple/list structure"""
+            if depth > 5:  # Prevent infinite recursion
+                raise TypeError(f"Too deeply nested structure (depth > 5)")
+
+            if isinstance(item, torch.Tensor):
+                return item.detach().to("cpu", dtype=torch.float16)
+            elif isinstance(item, (tuple, list)):
+                if len(item) == 0:
+                    raise TypeError("Empty tuple/list cannot be converted to tensor")
+                elif len(item) == 1:
+                    return flatten_to_tensor(item[0], depth + 1)
+                else:
+                    # Multi-element: flatten each recursively
+                    flattened = [flatten_to_tensor(x, depth + 1) for x in item]
+                    return tuple(flattened) if isinstance(item, tuple) else flattened
+            else:
+                raise TypeError(f"Cannot convert {type(item)} to tensor (depth={depth})")
+
+        # Convert vl_features to CPU tensors
+        try:
+            if isinstance(vl_features, dict):
+                data_to_save = {k: flatten_to_tensor(v) for k, v in vl_features.items()}
+            elif isinstance(vl_features, torch.Tensor):
+                data_to_save = vl_features.detach().to("cpu", dtype=torch.float16)
+            elif isinstance(vl_features, (tuple, list)):
+                data_to_save = tuple(flatten_to_tensor(v) for v in vl_features)
+            else:
+                data_to_save = vl_features
+        except (TypeError, AttributeError) as e:
+            print(f"⚠️ Failed to process vl_features: {e}")
+            print(f"   Type: {type(vl_features)}")
+            if isinstance(vl_features, (tuple, list)):
+                print(f"   Structure: {[type(v) for v in vl_features]}")
+            return
+
         # 파일 락을 이용한 Atomic 저장
-        self._atomic_save(vl_features.detach().to("cpu", dtype=torch.float16), cache_path)
+        self._atomic_save(data_to_save, cache_path)
 
         # 캐시 제한 적용
         self._enforce_cache_limit()
 
     @staticmethod
-    def _atomic_save(tensor_cpu: torch.Tensor, path: Path):
+    def _atomic_save(tensor_cpu: torch.Tensor | tuple | list | dict, path: Path):
         """
-        파일 락을 사용하여 Atomic하게 텐서를 저장합니다.
+        파일 락을 사용하여 Atomic하게 텐서(또는 텐서의 컬렉션)를 저장합니다.
         중간 파일(.pt.tmp)로 저장 후 원본 파일로 이동하여 파일 손상을 방지합니다.
         """
         tmp = path.with_suffix(".pt.tmp")
@@ -145,25 +183,32 @@ class VLACacheManager:
             return
 
         all_files = list(self.cache_dir.rglob("*.pt")) # 모든 .pt 파일 찾기
-        total_bytes = sum(f.stat().st_size for f in all_files) # 현재 캐시 총 크기
+        file_info = []
+        total_bytes = 0
+        for f in all_files:
+            try:
+                stat = f.stat()
+            except FileNotFoundError:
+                continue
+            file_info.append((f, stat.st_size, stat.st_mtime))
+            total_bytes += stat.st_size
         limit_bytes = self.cache_limit_gb * (1024 ** 3) # 설정된 캐시 한도 (바이트)
 
         if total_bytes <= limit_bytes: # 제한을 초과하지 않으면 종료
             return
 
         # 수정 시간 기준으로 파일 정렬 (가장 오래된 파일부터)
-        all_files.sort(key=lambda f: f.stat().st_mtime)
+        file_info.sort(key=lambda item: item[2])
 
         # 제한을 초과하는 만큼 가장 오래된 파일부터 삭제
-        for file in all_files:
+        for file, size, _ in file_info:
             if total_bytes <= limit_bytes:
                 break
             try:
-                size = file.stat().st_size
                 file.unlink(missing_ok=True) # 파일 삭제
-                total_bytes -= size
             except FileNotFoundError:
                 continue
+            total_bytes -= size
 
     def get_cache_stats(self) -> Dict:
         """

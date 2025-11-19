@@ -106,6 +106,7 @@ class UnifiedVLADataset(OldFormatDatasetMixin, NewFormatDatasetMixin, Dataset):
         disable_robot_state: bool = False,
         prompt_hash_override: Optional[str] = None,
         filter_by_cache: bool = False,
+        verbose_cache_stats: bool = False,
     ):
         self.data_dir = Path(data_dir)
         self.use_cache = bool(use_cache)
@@ -129,6 +130,7 @@ class UnifiedVLADataset(OldFormatDatasetMixin, NewFormatDatasetMixin, Dataset):
         self.disable_robot_state = disable_robot_state
         self._prompt_hash_override = prompt_hash_override
         self._filter_by_cache = filter_by_cache
+        self.verbose_cache_stats = bool(verbose_cache_stats)
 
         # Initialize augmentation (only if not using cache)
         if self.use_augmentation and not self.use_cache:
@@ -268,7 +270,7 @@ class UnifiedVLADataset(OldFormatDatasetMixin, NewFormatDatasetMixin, Dataset):
         original_count = self._total_samples
         self._total_samples = len(self._valid_indices)
 
-        if self._total_samples < original_count:
+        if self._total_samples < original_count and self.verbose_cache_stats:
             print(f"   🔍 {self.data_dir.name}: {self._total_samples}/{original_count} samples have cache ({self._total_samples/original_count*100:.1f}%)")
 
     def __len__(self):
@@ -364,15 +366,23 @@ class UnifiedVLADataset(OldFormatDatasetMixin, NewFormatDatasetMixin, Dataset):
                 prompt_hash=self.prompt_hash,
                 device="cpu"
             )
+
+            # Track cache statistics (class-level to share across all instances)
+            if not hasattr(self.__class__, '_cache_stats'):
+                self.__class__._cache_stats = {'miss': 0, 'hit': 0, 'total': 0}
+
             if vl_cache is None:
-                # Debug: print why cache failed
-                if not hasattr(self, '_cache_miss_logged'):
-                    print(f"⚠️ Cache miss for {self.data_dir.name}_vlm{vlm_idx} with prompt_hash={self.prompt_hash}")
-                    from pathlib import Path
-                    expected_path = Path(self.cache_root) / self.prompt_hash / f"{self.data_dir.name}_vlm{vlm_idx}.pt"
-                    print(f"   Expected: {expected_path}")
-                    print(f"   Exists: {expected_path.exists()}")
-                    self._cache_miss_logged = True
+                self.__class__._cache_stats['miss'] += 1
+                self.__class__._cache_stats['total'] += 1
+
+                # Print summary every 100 accesses
+                if self.verbose_cache_stats and self.__class__._cache_stats['total'] % 100 == 1:
+                    miss_rate = (self.__class__._cache_stats['miss'] / self.__class__._cache_stats['total']) * 100
+                    print(f"📊 Cache: {self.__class__._cache_stats['hit']} hits / {self.__class__._cache_stats['miss']} misses ({miss_rate:.1f}% miss rate)")
+            else:
+                self.__class__._cache_stats['hit'] += 1
+                self.__class__._cache_stats['total'] += 1
+
             if vl_cache is not None:
                 return vl_cache, []
 
@@ -575,6 +585,7 @@ def create_unified_dataloader(
         "cache_build_only": cache_build_only,
         "prompt_hash_override": prompt_hash_override,
         "filter_by_cache": filter_by_cache,
+        "verbose_cache_stats": not skip_dataset_stats,
     }
 
     # Load old format datasets

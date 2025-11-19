@@ -94,24 +94,57 @@ class VLACacheManager:
         dataset_name: str,
         vlm_idx: int,
         prompt_hash: str,
-        vl_features: (torch.Tensor | dict),
+        vl_features: (torch.Tensor | dict | tuple),
     ):
         """
-        Save cache atomically. Handles single tensors or dicts of tensors.
+        Save cache atomically. Handles single tensors, dicts of tensors, or tuples of tensors.
         """
         cache_path = self.get_cache_path(dataset_name, vlm_idx, prompt_hash)
 
+        def flatten_to_tensor(item, depth=0):
+            """Helper to extract tensor from potentially nested tuple/list structure"""
+            if depth > 5:  # Prevent infinite recursion
+                raise TypeError(f"Too deeply nested structure (depth > 5)")
+
+            if isinstance(item, torch.Tensor):
+                return item.detach().to("cpu", dtype=torch.float16)
+            elif isinstance(item, (tuple, list)):
+                # Handle nested structures (e.g., from torch.split())
+                if len(item) == 0:
+                    raise TypeError("Empty tuple/list cannot be converted to tensor")
+                elif len(item) == 1:
+                    return flatten_to_tensor(item[0], depth + 1)
+                else:
+                    # Multi-element tuple/list - try to flatten each recursively
+                    flattened = [flatten_to_tensor(x, depth + 1) for x in item]
+                    return tuple(flattened) if isinstance(item, tuple) else flattened
+            else:
+                raise TypeError(f"Cannot convert {type(item)} to tensor (depth={depth})")
+
         data_to_save = None
-        if isinstance(vl_features, dict):
-            data_to_save = {
-                k: v.detach().to("cpu", dtype=torch.float16)
-                for k, v in vl_features.items() if isinstance(v, torch.Tensor)
-            }
-        elif isinstance(vl_features, torch.Tensor):
-            data_to_save = vl_features.detach().to("cpu", dtype=torch.float16)
-        else:
-            # For other types that can be pickled directly
-            data_to_save = vl_features
+        try:
+            if isinstance(vl_features, dict):
+                # Use flatten_to_tensor for dict values as well
+                data_to_save = {
+                    k: flatten_to_tensor(v) if not isinstance(v, (dict, list, tuple)) or isinstance(v, torch.Tensor) else v
+                    for k, v in vl_features.items()
+                }
+            elif isinstance(vl_features, torch.Tensor):
+                data_to_save = vl_features.detach().to("cpu", dtype=torch.float16)
+            elif isinstance(vl_features, (tuple, list)):
+                data_to_save = tuple(flatten_to_tensor(v) for v in vl_features)
+            else:
+                # For other types that can be pickled directly
+                data_to_save = vl_features
+        except (TypeError, AttributeError) as e:
+            print(f"⚠️ Failed to process vl_features: {e}")
+            print(f"   Type: {type(vl_features)}")
+            if isinstance(vl_features, (tuple, list)):
+                print(f"   Structure: {[type(v) for v in vl_features]}")
+                # Try to print first element structure if nested
+                if len(vl_features) > 0 and isinstance(vl_features[0], (tuple, list)):
+                    print(f"   First element structure: {[type(x) for x in vl_features[0]]}")
+            return
 
         if data_to_save is None:
             return
@@ -173,25 +206,31 @@ class VLACacheManager:
         if self.cache_limit_gb <= 0:
             return
 
-        all_files = list(self.cache_dir.rglob("*.pt"))
-        total_bytes = sum(f.stat().st_size for f in all_files)
-        limit_bytes = self.cache_limit_gb * (1024 ** 3)
+        file_stats = []
+        for f in self.cache_dir.rglob("*.pt"):
+            try:
+                stat = f.stat()
+                file_stats.append({"path": f, "size": stat.st_size, "mtime": stat.st_mtime})
+            except FileNotFoundError:
+                continue  # File was deleted by another process
+
+        total_bytes = sum(s["size"] for s in file_stats)
+        limit_bytes = self.cache_limit_gb * (1024**3)
 
         if total_bytes <= limit_bytes:
             return
 
         # Sort files by modification time (oldest first)
-        all_files.sort(key=lambda f: f.stat().st_mtime)
+        file_stats.sort(key=lambda s: s["mtime"])
 
-        for file in all_files:
+        for stat in file_stats:
             if total_bytes <= limit_bytes:
                 break
             try:
-                size = file.stat().st_size
-                file.unlink(missing_ok=True)
-                total_bytes -= size
+                stat["path"].unlink()
+                total_bytes -= stat["size"]
             except FileNotFoundError:
-                continue
+                continue  # File was deleted by another process
 
     def get_cache_stats(self) -> dict:
         """Get statistics for the entire cache."""
@@ -254,7 +293,7 @@ _cache_manager = None
 
 def get_cache_manager(
     cache_dir: str = "/home/najo/NAS/VLA/dataset/cache/qwen_vl_features",
-    cache_limit_gb: float = 50.0,
+    cache_limit_gb: float = 200.0,
 ) -> VLACacheManager:
     """Get global cache manager instance"""
     global _cache_manager

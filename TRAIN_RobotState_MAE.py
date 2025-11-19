@@ -68,10 +68,14 @@ class MAERobotStateModel(nn.Module):
         # Learnable mask token (B, T, D_in)로 브로드캐스트용
         self.mask_token = nn.Parameter(torch.zeros(1, 1, self.output_dim))
 
-        # Decoder head
+        # Deeper decoder for improved reconstruction capacity
         self.decoder = nn.Sequential(
             nn.Linear(self.encoder_dim, self.decoder_dim),
             nn.GELU(),
+            nn.LayerNorm(self.decoder_dim),
+            nn.Linear(self.decoder_dim, self.decoder_dim),
+            nn.GELU(),
+            nn.LayerNorm(self.decoder_dim),
             nn.Linear(self.decoder_dim, self.output_dim)
         )
 
@@ -117,15 +121,15 @@ class RobotStateAugmentation:
         """
         augmented = robot_states.clone()
 
-        # 1. Gaussian noise (25% probability)
-        if np.random.random() < 0.10:
+        # 1. Gaussian noise (30% probability)
+        if np.random.random() < 0.30:
             noise = torch.randn_like(augmented) * self.noise_std
             # Joint angles (0-5): smaller noise
             noise[:, :6] *= 0.2
             augmented += noise
 
         # 2. Magnitude scaling (30% probability)
-        if np.random.random() < 0.10:
+        if np.random.random() < 0.30:
             # Joint scaling
             joint_scale = np.random.uniform(*self.joint_scale_range)
             augmented[:, :6] *= joint_scale
@@ -151,11 +155,13 @@ class RobotStateDataset(Dataset):
     Includes normalization for stable training.
     """
     def __init__(self, root_dir: str, window_size: int = 60, step: int = 10,
-                 use_augmentation: bool = True, normalize: bool = True):
+                 use_augmentation: bool = True, normalize: bool = True,
+                 data_representation: str = 'absolute'):
         self.window_size = window_size
         self.step = step
         self.data_files = []
         self.normalize = normalize
+        self.data_representation = data_representation
 
         # Data augmentation
         self.use_augmentation = use_augmentation
@@ -177,11 +183,20 @@ class RobotStateDataset(Dataset):
                 # Load the data using mmap_mode for memory efficiency
                 data = np.load(file_path, mmap_mode='r')['robot_states']
 
+                if self.data_representation == 'delta':
+                    delta_data = np.zeros_like(data)
+                    delta_data[1:] = data[1:] - data[:-1]
+                    # Assuming each file is one continuous episode.
+                    # The first timestep's delta is 0.
+                    data_to_process = delta_data
+                else:
+                    data_to_process = data
+
                 # Collect data for computing normalization statistics
                 if normalize:
-                    all_data.append(data)
+                    all_data.append(data_to_process)
 
-                # Create sliding windows
+                # Create sliding windows from original data length
                 for i in range(0, len(data) - self.window_size + 1, self.step):
                     self.windows.append((file_path, i))
             except Exception as e:
@@ -192,7 +207,11 @@ class RobotStateDataset(Dataset):
             all_data_concat = np.concatenate(all_data, axis=0)
             self.mean = torch.from_numpy(all_data_concat.mean(axis=0).astype(np.float32))
             self.std = torch.from_numpy(all_data_concat.std(axis=0).astype(np.float32) + 1e-6)
-            print(f"📊 Data normalization statistics computed:")
+            
+            if self.data_representation == 'delta':
+                print(f"📊 Using DELTA representation. Normalization statistics computed:")
+            else:
+                print(f"📊 Using ABSOLUTE representation. Normalization statistics computed:")
             print(f"   Joints mean: {self.mean[:6].numpy()}")
             print(f"   Joints std: {self.std[:6].numpy()}")
             print(f"   Pose mean: {self.mean[6:].numpy()}")
@@ -220,6 +239,13 @@ class RobotStateDataset(Dataset):
 
         window = data[start_idx : start_idx + self.window_size]
         window_tensor = torch.from_numpy(window.astype(np.float32))
+
+        # Convert to delta representation if needed
+        if self.data_representation == 'delta':
+            original_window = window_tensor.clone()
+            delta_window = torch.zeros_like(original_window)
+            delta_window[1:] = original_window[1:] - original_window[:-1]
+            window_tensor = delta_window
 
         # Apply normalization
         if self.normalize and self.mean is not None and self.std is not None:
@@ -345,7 +371,11 @@ def main(args):
     for dataset_path in args.dataset_paths:
         if is_main_process:
             print(f"  Loading from {dataset_path}...")
-        ds = RobotStateDataset(root_dir=dataset_path, window_size=args.window_size)
+        ds = RobotStateDataset(
+            root_dir=dataset_path,
+            window_size=args.window_size,
+            data_representation=args.data_representation
+        )
         datasets.append(ds)
 
     dataset = ConcatDataset(datasets) if len(datasets) > 1 else datasets[0]
@@ -421,6 +451,7 @@ def main(args):
                 "output_dim": args.output_dim,
                 "joint_weight": args.joint_weight,
                 "pose_weight": args.pose_weight,
+                "data_representation": args.data_representation,
             }
         )
 
@@ -514,6 +545,8 @@ def main(args):
             ds.eval()
 
         total_val_loss = 0
+        total_val_joint_loss = 0
+        total_val_pose_loss = 0
         val_count = 0
         with torch.no_grad():
             val_progress_bar = tqdm(val_loader, desc=f"Epoch {epoch + 1}/{args.epochs} [Val]", disable=not is_main_process)
@@ -542,19 +575,25 @@ def main(args):
                 )
 
                 total_val_loss += val_loss.item() * B
+                total_val_joint_loss += val_loss_joints.item() * B
+                total_val_pose_loss += val_loss_pose.item() * B
                 val_count += B
 
-        tensor = torch.tensor([total_val_loss, val_count], device=device, dtype=torch.float64)
+        tensor = torch.tensor([total_val_loss, total_val_joint_loss, total_val_pose_loss, val_count], device=device, dtype=torch.float64)
         dist.all_reduce(tensor, op=dist.ReduceOp.SUM)
-        global_val_loss, global_count = tensor.tolist()
+        global_val_loss, global_val_joint_loss, global_val_pose_loss, global_count = tensor.tolist()
         avg_val_loss = global_val_loss / max(1.0, global_count)
+        avg_val_joint_loss = global_val_joint_loss / max(1.0, global_count)
+        avg_val_pose_loss = global_val_pose_loss / max(1.0, global_count)
 
         if is_main_process:
-            print(f"Epoch {epoch + 1} Validation Loss: {avg_val_loss:.4f}")
+            print(f"Epoch {epoch + 1} Validation Loss: {avg_val_loss:.4f}, Joint Loss: {avg_val_joint_loss:.4f}, Pose Loss: {avg_val_pose_loss:.4f}")
 
             # Log validation metrics to wandb
             wandb.log({
                 "val/loss": avg_val_loss,
+                "val/joint_loss": avg_val_joint_loss,
+                "val/pose_loss": avg_val_pose_loss,
                 "epoch": epoch + 1
             })
 
@@ -600,6 +639,8 @@ if __name__ == "__main__":
     parser.add_argument('--dataset_paths', type=str, nargs='*',
                         default=["/home/najo/NAS/VLA/dataset/New_dataset", "/home/najo/NAS/VLA/dataset/New_dataset2"],
                         help='Paths to the root dataset directories.')
+    parser.add_argument('--data_representation', type=str, choices=['absolute', 'delta'], default='absolute',
+                        help='Representation of robot state data: absolute positions or delta velocities.')
     parser.add_argument('--window_size', type=int, default=100, help='Temporal window size for robot states.')
     parser.add_argument('--batch_size', type=int, default=128, help='Batch size per GPU.')
     parser.add_argument('--num_workers', type=int, default=8, help='Number of dataloader workers per GPU.')
@@ -610,7 +651,7 @@ if __name__ == "__main__":
     parser.add_argument('--num_heads', type=int, default=8, help='Number of heads in the Transformer.')
     parser.add_argument('--num_layers', type=int, default=6, help='Number of layers in the Transformer.')
     parser.add_argument('--output_dim', type=int, default=1024, help='Output dimension of the encoder projection head.')
-    parser.add_argument('--mask_ratio', type=float, default=0.5, help='Ratio of timesteps to mask.')
+    parser.add_argument('--mask_ratio', type=float, default=0.75, help='Ratio of timesteps to mask.')
 
     # Training & Optimization
     parser.add_argument('--epochs', type=int, default=50, help='Number of training epochs.')

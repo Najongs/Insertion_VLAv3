@@ -154,7 +154,8 @@ class FlowMatchingActionExpert(nn.Module):
         self,
         image_feature_dim: int = 2048,
         text_guidance_dim: int = 2048,
-        sensor_dim: int = 2048,
+        sensor_dim: Optional[int] = 2048,
+        robot_state_dim: Optional[int] = None,
         action_dim: int = 7,
         horizon: int = 8,
         hidden_dim: int = 1024,
@@ -200,14 +201,16 @@ class FlowMatchingActionExpert(nn.Module):
             nn.Linear(hidden_dim, action_dim)
         )
         
-        # --- (PATCH A1) Sensor 토큰/타입 임베딩 설정 ---
-        self.use_sensor_tokens = True  # 센서 토큰을 메모리에 함께 넣음 (False로 끄기 가능)
+        # --- (PATCH A1) Sensor/Robot 토큰/타입 임베딩 설정 ---
         self.context_proj = nn.Linear(image_feature_dim, hidden_dim)  # 컨텍스트(비전) 프로젝션
-        self.sensor_proj = nn.Linear(sensor_dim, hidden_dim)          # 센서 벡터/시퀀스 프로젝션
-        self.token_type_embed = nn.Embedding(2, hidden_dim)           # 0=vision, 1=sensor
+        self.use_sensor_tokens = sensor_dim is not None
+        self.sensor_proj = nn.Linear(sensor_dim, hidden_dim) if self.use_sensor_tokens else None
+        self.use_robot_tokens = robot_state_dim is not None
+        self.robot_proj = nn.Linear(robot_state_dim, hidden_dim) if self.use_robot_tokens else None
+        self.token_type_embed = nn.Embedding(3, hidden_dim)           # 0=vision, 1=sensor, 2=robot
 
         # 포지셔널(메모리/타깃) 임베딩
-        self.mem_pos = nn.Parameter(torch.randn(1, 512, hidden_dim))     # 메모리 최대길이 가정
+        self.mem_pos = nn.Parameter(torch.randn(1, 2048, hidden_dim))     # 메모리 최대길이 가정
         self.tgt_pos = nn.Parameter(torch.randn(1, horizon, hidden_dim)) # 타깃 길이=H
         
         # (PATCH B1) 디코더 자기어텐션 인과 마스크
@@ -236,14 +239,16 @@ class FlowMatchingActionExpert(nn.Module):
         t: torch.Tensor,
         context_features: torch.Tensor,
         guidance_vector: torch.Tensor,
-        sensor_features: Optional[torch.Tensor] = None,   # <-- 추가
+        sensor_features: Optional[torch.Tensor] = None,
+        robot_state_tokens: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
 
         B, H, _ = x_t.shape
-        
         assert context_features.dim() == 3, f"context_features (B,S,D) 필요, got {context_features.shape}"
         if self.use_sensor_tokens:
             assert sensor_features is not None, "sensor_features가 필요합니다(use_sensor_tokens=True)"
+        if self.use_robot_tokens:
+            assert robot_state_tokens is not None, "robot_state_tokens가 필요합니다(use_robot_tokens=True)"
 
         # 1) 시간/가이던스 임베딩
         t_embed = self.time_mlp(self.sinusoidal_time_embedding(t))
@@ -254,28 +259,44 @@ class FlowMatchingActionExpert(nn.Module):
         # 2) 디코더 입력(tgt) + 포지셔널
         tgt = self.action_embed(x_t) + self.tgt_pos[:, :H]  # (B,H,D)
 
-        # 3) 메모리(컨텍스트) 프로젝션 + 포지셔널
-        # (PATCH A3) 메모리(비전+센서) 구성 + 포지셔널/타입 임베딩
+        # 3) 메모리 토큰 구성 (비전 + 센서 + 로봇 상태)
+        memory_chunks = []
+        pos_cursor = 0
+        max_mem_len = self.mem_pos.size(1)
+
         vision_mem = self.context_proj(context_features)  # (B, Sv, D)
         vision_mem = vision_mem + self.token_type_embed.weight[0].view(1, 1, -1)
+        Sv = vision_mem.size(1)
+        if pos_cursor + Sv > max_mem_len:
+            raise ValueError("mem_pos 길이가 부족합니다. Sv 초과.")
+        vision_mem = vision_mem + self.mem_pos[:, pos_cursor:pos_cursor + Sv]
+        pos_cursor += Sv
+        memory_chunks.append(vision_mem)
 
         if self.use_sensor_tokens:
-            assert sensor_features is not None, "use_sensor_tokens=True이면 sensor_features 필요"
             if sensor_features.dim() == 2:
-                sensor_tok = self.sensor_proj(sensor_features).unsqueeze(1)  # (B,1,D)
+                sensor_tok = self.sensor_proj(sensor_features).unsqueeze(1)
             else:
-                sensor_tok = self.sensor_proj(sensor_features)               # (B,Ss,D)
+                sensor_tok = self.sensor_proj(sensor_features)
             sensor_tok = sensor_tok + self.token_type_embed.weight[1].view(1, 1, -1)
-
-            Sv = vision_mem.size(1)
             Ss = sensor_tok.size(1)
-            vision_mem = vision_mem + self.mem_pos[:, :Sv]
-            sensor_tok = sensor_tok + (self.mem_pos[:, :Ss] if Ss <= self.mem_pos.size(1) else 0.0)
+            if pos_cursor + Ss > max_mem_len:
+                raise ValueError("mem_pos 길이가 부족합니다. Ss 초과.")
+            sensor_tok = sensor_tok + self.mem_pos[:, pos_cursor:pos_cursor + Ss]
+            pos_cursor += Ss
+            memory_chunks.append(sensor_tok)
 
-            memory = torch.cat([vision_mem, sensor_tok], dim=1)  # (B, Sv+Ss, D)
-        else:
-            Sv = vision_mem.size(1)
-            memory = vision_mem + self.mem_pos[:, :Sv]
+        if self.use_robot_tokens:
+            robot_tok = self.robot_proj(robot_state_tokens)
+            robot_tok = robot_tok + self.token_type_embed.weight[2].view(1, 1, -1)
+            Sr = robot_tok.size(1)
+            if pos_cursor + Sr > max_mem_len:
+                raise ValueError("mem_pos 길이가 부족합니다. Sr 초과.")
+            robot_tok = robot_tok + self.mem_pos[:, pos_cursor:pos_cursor + Sr]
+            pos_cursor += Sr
+            memory_chunks.append(robot_tok)
+
+        memory = torch.cat(memory_chunks, dim=1)
 
 
         # 4) 컨디셔닝 벡터를 tgt에 주입
@@ -304,12 +325,17 @@ class FlowMatchingActionExpert(nn.Module):
         context_features: torch.Tensor,
         guidance_vector: torch.Tensor,
         sensor_features: Optional[torch.Tensor] = None,
+        robot_state_tokens: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         # 스케일 정규화
         actions_n = actions / self.action_scale  # (B,H,A)
 
         x_t, u_t, t_scalar = self.flow.compute_flow_and_target(actions_n)
-        v_pred = self.forward(x_t, t_scalar, context_features, guidance_vector, sensor_features=sensor_features)
+        v_pred = self.forward(
+            x_t, t_scalar, context_features, guidance_vector,
+            sensor_features=sensor_features,
+            robot_state_tokens=robot_state_tokens
+        )
 
         # λ(t) = (1 - t)
         lam = (1.0 - t_scalar).clamp_(min=0.0)
@@ -326,7 +352,8 @@ class FlowMatchingActionExpert(nn.Module):
         self,
         context_features: torch.Tensor,
         guidance_vector: torch.Tensor,
-        sensor_features: Optional[torch.Tensor] = None,   # <-- 추가
+        sensor_features: Optional[torch.Tensor] = None,
+        robot_state_tokens: Optional[torch.Tensor] = None,
         batch_size: Optional[int] = None,
         num_steps: int = 6,                               # 기본값 변경
         method: str = 'rk4'                               # 기본값 변경
@@ -339,7 +366,11 @@ class FlowMatchingActionExpert(nn.Module):
         x_0 = torch.randn(batch_size, self.horizon, self.action_dim, device=device, dtype=context_features.dtype)
         
         def velocity_fn(x, t):
-            return self.forward(x, t, context_features, guidance_vector, sensor_features=sensor_features)
+            return self.forward(
+                x, t, context_features, guidance_vector,
+                sensor_features=sensor_features,
+                robot_state_tokens=robot_state_tokens
+            )
         
         actions = self.flow.sample_ode(velocity_fn, x_0, num_steps=num_steps, method=method)
         actions = actions * self.action_scale  # 원 단위 복원
@@ -353,7 +384,8 @@ class RegressionActionExpert(nn.Module):
     def __init__(self,
                  image_feature_dim: int = 2048,
                  text_guidance_dim: int = 2048,
-                 sensor_dim: int = 2048,
+                 sensor_dim: Optional[int] = 2048,
+                 robot_state_dim: Optional[int] = None,
                  action_dim: int = 7,
                  horizon: int = 8,
                  hidden_dim: int = 1024,
@@ -369,7 +401,7 @@ class RegressionActionExpert(nn.Module):
         
         # --- 컨텍스트(이미지 토큰) 프로젝션 & 포지셔널 임베딩 ---
         self.context_proj = nn.Linear(image_feature_dim, hidden_dim)
-        self.mem_pos = nn.Parameter(torch.randn(1, 512, hidden_dim))  # 최대 길이 가정(슬라이스 사용)
+        self.mem_pos = nn.Parameter(torch.randn(1, 2048, hidden_dim))  # 최대 길이 가정(슬라이스 사용)
 
         # --- 핵심 아키텍처: Transformer Decoder ---
         self.pos_embed = nn.Parameter(torch.randn(1, horizon, hidden_dim))
@@ -382,9 +414,11 @@ class RegressionActionExpert(nn.Module):
 
         # (PATCH F1) 델타 안전 한계
         self.max_delta = nn.Parameter(torch.tensor([5.,5.,5., 0.2,0.2,0.2, 1.]), requires_grad=False)
-        self.token_type_embed = nn.Embedding(2, hidden_dim)  # 0=vision, 1=sensor
-        self.use_sensor_tokens = True
-        self.sensor_proj = nn.Linear(sensor_dim, hidden_dim)
+        self.token_type_embed = nn.Embedding(3, hidden_dim)  # 0=vision, 1=sensor, 2=robot
+        self.use_sensor_tokens = sensor_dim is not None
+        self.sensor_proj = nn.Linear(sensor_dim, hidden_dim) if self.use_sensor_tokens else None
+        self.use_robot_tokens = robot_state_dim is not None
+        self.robot_proj = nn.Linear(robot_state_dim, hidden_dim) if self.use_robot_tokens else None
 
         
         # --- 출력 헤드 ---
@@ -400,6 +434,7 @@ class RegressionActionExpert(nn.Module):
             context_features: torch.Tensor,
             guidance_vector: torch.Tensor,
             sensor_features: Optional[torch.Tensor] = None,
+            robot_state_tokens: Optional[torch.Tensor] = None,
         ) -> Tuple[torch.Tensor, torch.Tensor]:
 
         B, _, _ = z_chunk.shape
@@ -414,6 +449,8 @@ class RegressionActionExpert(nn.Module):
         assert context_features.dim() == 3, f"context_features (B,S,D) 필요, got {context_features.shape}"
         if self.use_sensor_tokens:
             assert sensor_features is not None, "sensor_features가 필요합니다(use_sensor_tokens=True)"
+        if self.use_robot_tokens:
+            assert robot_state_tokens is not None, "robot_state_tokens가 필요합니다(use_robot_tokens=True)"
 
         # 1) 컨디셔닝 벡터
         guidance_embed = self.text_guidance_proj(guidance_vector)
@@ -422,6 +459,16 @@ class RegressionActionExpert(nn.Module):
         # 2) 메모리(비전+센서) 구성 + 포지셔널/타입 임베딩
         vision_mem = self.context_proj(context_features)              # (B,Sv,D)
         vision_mem = vision_mem + self.token_type_embed.weight[0].view(1,1,-1)
+        memory_chunks = []
+        pos_cursor = 0
+        max_mem_len = self.mem_pos.size(1)
+
+        Sv = vision_mem.size(1)
+        if pos_cursor + Sv > max_mem_len:
+            raise ValueError("mem_pos 길이가 부족합니다. Sv 초과.")
+        vision_mem = vision_mem + self.mem_pos[:, pos_cursor:pos_cursor + Sv]
+        pos_cursor += Sv
+        memory_chunks.append(vision_mem)
 
         if self.use_sensor_tokens:
             if sensor_features.dim() == 2:
@@ -429,15 +476,24 @@ class RegressionActionExpert(nn.Module):
             else:
                 sensor_tok = self.sensor_proj(sensor_features)               # (B,Ss,D)
             sensor_tok = sensor_tok + self.token_type_embed.weight[1].view(1,1,-1)
-
-            Sv = vision_mem.size(1)
             Ss = sensor_tok.size(1)
-            vision_mem = vision_mem + self.mem_pos[:, :Sv]
-            sensor_tok = sensor_tok + (self.mem_pos[:, :Ss] if Ss <= self.mem_pos.size(1) else 0.0)
-            memory = torch.cat([vision_mem, sensor_tok], dim=1)
-        else:
-            Sv = vision_mem.size(1)
-            memory = vision_mem + self.mem_pos[:, :Sv]
+            if pos_cursor + Ss > max_mem_len:
+                raise ValueError("mem_pos 길이가 부족합니다. Ss 초과.")
+            sensor_tok = sensor_tok + self.mem_pos[:, pos_cursor:pos_cursor + Ss]
+            pos_cursor += Ss
+            memory_chunks.append(sensor_tok)
+
+        if self.use_robot_tokens:
+            robot_tok = self.robot_proj(robot_state_tokens)
+            robot_tok = robot_tok + self.token_type_embed.weight[2].view(1,1,-1)
+            Sr = robot_tok.size(1)
+            if pos_cursor + Sr > max_mem_len:
+                raise ValueError("mem_pos 길이가 부족합니다. Sr 초과.")
+            robot_tok = robot_tok + self.mem_pos[:, pos_cursor:pos_cursor + Sr]
+            pos_cursor += Sr
+            memory_chunks.append(robot_tok)
+
+        memory = torch.cat(memory_chunks, dim=1)
 
         # 3) 타깃 토큰(tgt) + 인과 마스크
         tgt = self.pos_embed.repeat(B, 1, 1) + cond_embed.unsqueeze(1)

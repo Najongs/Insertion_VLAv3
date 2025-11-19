@@ -46,6 +46,7 @@ class VisionLanguageEncoder(torch.nn.Module):
         device: torch.device,
         view_aggregation: str = 'weighted_mean',
         view5_weight: float = 2.0,
+        debug_logging: bool = False,
     ):
         super().__init__()
         self.vl_model = vl_model
@@ -55,6 +56,7 @@ class VisionLanguageEncoder(torch.nn.Module):
         self.view_aggregation = view_aggregation
         self.device = device
         self.view5_weight = view5_weight
+        self.debug_logging = bool(debug_logging)
         # Qwen-VL의 ViT-G는 16x16 패치 크기에 448x448 해상도를 사용하므로, (448/16)^2 = 28^2 = 784개의 패치 토큰을 가집니다.
         self.num_patches_per_image = 784
 
@@ -114,38 +116,44 @@ class VisionLanguageEncoder(torch.nn.Module):
                 text_inputs, image_inputs, cache_keys, use_cache
             )
 
-    def _get_cache_path(self, key: str, txt: str, views: list) -> Path:
-        """Generate a unique file path for a given cache key."""
-        vlist = [v for v in views if v is not None] if views is not None else []
-        # v2 해시: 아키텍처 변경으로 인한 캐시 포맷 변경
-        raw = key + "||" + txt + "||" + "|".join(vlist) + "||v2"
-        h = hashlib.sha1(raw.encode("utf-8")).hexdigest()[:24]
-        return self.cache_dir / f"{h}.pt"
-
-    def _enforce_cache_limit(self):
-        """Enforce the cache size limit by deleting the oldest files."""
-        if self.cache_limit_gb <= 0:
-            return
-        # Use a temporary VLACacheManager instance to borrow its cache management logic.
-        temp_cache_manager = VLACacheManager(
-            cache_dir=str(self.cache_dir), cache_limit_gb=self.cache_limit_gb
-        )
-        temp_cache_manager._enforce_cache_limit()
+    # ✅ _get_cache_path()와 _enforce_cache_limit() 제거됨
+    # 캐싱은 unified_model의 auto_cache_backfill이 VLACacheManager로 처리
 
     def _preprocess_single_input(
         self, args: Tuple[str, List[str], str]
     ) -> Tuple[str, str, List[str], str, List, List]:
         """Preprocess a single text-image pair for the Qwen-VL model."""
         txt, views, key = args
+
+        # DEBUG: Check input
+        if self.debug_logging and not hasattr(self, "_preprocess_debug_logged"):
+            print(f"🔍 PREPROCESS DEBUG:")
+            print(f"   txt: {txt[:50]}..." if txt else "   txt: None")
+            print(f"   views: {views}")
+            print(f"   views type: {type(views)}")
+            if views:
+                print(f"   views length: {len(views)}")
+                print(f"   first view: {views[0] if len(views) > 0 else 'N/A'}")
+
         msg_content = [
             {"type": "image", "image": v} for v in (views or []) if v is not None
         ]
+
+        if self.debug_logging and not hasattr(self, "_preprocess_debug_logged"):
+            print(f"   msg_content images: {len([m for m in msg_content if m['type'] == 'image'])}")
+            self._preprocess_debug_logged = True
+
         msg_content.append({"type": "text", "text": txt})
         messages = [{"role": "user", "content": msg_content}]
         text = self.processor.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=False
         )
         vision_inputs, video_inputs = process_vision_info(messages)
+
+        if self.debug_logging and not hasattr(self, "_vision_process_logged"):
+            print(f"   process_vision_info returned: {vision_inputs}")
+            self._vision_process_logged = True
+
         return key, txt, views, text, vision_inputs, video_inputs
 
     def _encode_sequential(
@@ -170,22 +178,9 @@ class VisionLanguageEncoder(torch.nn.Module):
         n = min(len(text_inputs), len(image_inputs), len(cache_keys))
         text_inputs, image_inputs, cache_keys = text_inputs[:n], image_inputs[:n], cache_keys[:n]
 
-        if use_cache and self.cache_enabled:
-            for txt, views, key in zip(text_inputs, image_inputs, cache_keys):
-                cache_path = self._get_cache_path(key, txt, views)
-                if cache_path.exists():
-                    try:
-                        img_feat, txt_feat = torch.load(cache_path, map_location="cpu")
-                        img_feat = img_feat.pin_memory().to(self.device, non_blocking=True, dtype=torch.bfloat16)
-                        txt_feat = txt_feat.pin_memory().to(self.device, non_blocking=True, dtype=torch.bfloat16)
-                        features_dict[key] = (img_feat, txt_feat)
-                    except (ValueError, EOFError) as e:
-                        print(f"⚠️ 캐시 파일 손상 감지 ({cache_path}), 재생성합니다. 오류: {e}")
-                        miss_items.append((txt, views, key))
-                else:
-                    miss_items.append((txt, views, key))
-        else:
-            miss_items = list(zip(text_inputs, image_inputs, cache_keys))
+        # ✅ vl_encoder는 캐시 로드하지 않음 - unified_model이 외부 캐시 관리 담당
+        # 모든 항목을 VLM forward로 처리
+        miss_items = list(zip(text_inputs, image_inputs, cache_keys))
 
         if miss_items and use_cache and self.strict_cache:
             missing_keys = [key for _, _, key in miss_items]
@@ -199,18 +194,15 @@ class VisionLanguageEncoder(torch.nn.Module):
 
             with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
                 for key, txt, views, _, vision_inputs, _ in results:
-                    if use_cache and self.cache_enabled:
-                        cache_path = self._get_cache_path(key, txt, views)
-                        if cache_path.exists():
-                            try:
-                                img_feat, txt_feat = torch.load(cache_path, map_location="cpu")
-                                features_dict[key] = (
-                                    img_feat.pin_memory().to(self.device, non_blocking=True, dtype=torch.bfloat16),
-                                    txt_feat.pin_memory().to(self.device, non_blocking=True, dtype=torch.bfloat16)
-                                )
-                                continue
-                            except (ValueError, EOFError):
-                                pass
+                    # DEBUG: Check vision_inputs
+                    if self.debug_logging and not hasattr(self, "_vision_debug_logged"):
+                        print(f"🔍 VL_ENCODER DEBUG:")
+                        print(f"   views: {views}")
+                        print(f"   vision_inputs: {vision_inputs}")
+                        print(f"   vision_inputs type: {type(vision_inputs)}")
+                        if vision_inputs:
+                            print(f"   vision_inputs length: {len(vision_inputs)}")
+                        self._vision_debug_logged = True
 
                     # 1. 이미지 전용 추론 (순수 이미지 특징 추출)
                     if vision_inputs:
@@ -230,13 +222,69 @@ class VisionLanguageEncoder(torch.nn.Module):
                             for k, v in image_only_inputs_cpu.items()
                         }
                         image_only_inputs['input_ids'] = image_only_inputs['input_ids'].to(dtype=torch.long)
-                        
+
+                        # DEBUG: Check input_ids and find correct image token
+                        if self.debug_logging and not hasattr(self, "_token_debug_logged"):
+                            print(f"🔍 TOKEN DEBUG:")
+                            print(f"   input_ids shape: {image_only_inputs['input_ids'].shape}")
+                            print(f"   Unique token IDs: {torch.unique(image_only_inputs['input_ids'])}")
+
+                            # Check special tokens in processor
+                            print(f"\n📝 Processor special tokens:")
+                            if hasattr(self.processor, 'tokenizer'):
+                                tok = self.processor.tokenizer
+                                print(f"   image_token_id: {getattr(tok, 'image_token_id', 'N/A')}")
+                                print(f"   vision_start_token_id: {getattr(tok, 'vision_start_token_id', 'N/A')}")
+                                print(f"   vision_end_token_id: {getattr(tok, 'vision_end_token_id', 'N/A')}")
+
+                                # Check added_tokens
+                                if hasattr(tok, 'added_tokens_decoder'):
+                                    print(f"\n   Special tokens in vocab:")
+                                    for token_id, token_obj in tok.added_tokens_decoder.items():
+                                        token_str = str(token_obj)
+                                        if 'image' in token_str.lower() or 'vision' in token_str.lower():
+                                            print(f"      {token_id}: {token_str}")
+
+                            if self.debug_logging:
+                                print(f"\n   text_with_placeholders sample:")
+                                print(f"   {text_with_placeholders[:500]}")
+
+                            self._token_debug_logged = True
+
                         image_outputs = self.vl_model(**image_only_inputs, output_hidden_states=True, return_dict=True)
                         image_hidden_state = image_outputs.hidden_states[-1]
-                        
-                        image_token_mask = (image_only_inputs['input_ids'] == 151857)
-                        image_indices = torch.where(image_token_mask.squeeze(0))[0]
-                        image_features = image_hidden_state[:, image_indices, :]
+
+                        # Qwen2.5-VL uses <|vision_start|> (151652) and <|vision_end|> (151653)
+                        # Extract all hidden states between these markers
+                        input_ids_flat = image_only_inputs['input_ids'].squeeze(0)
+
+                        # Find all vision_start and vision_end positions
+                        vision_start_positions = torch.where(input_ids_flat == 151652)[0]
+                        vision_end_positions = torch.where(input_ids_flat == 151653)[0]
+
+                        if self.debug_logging and not hasattr(self, "_indices_debug_logged"):
+                            print(f"\n🔍 VISION TOKEN EXTRACTION:")
+                            print(f"   vision_start_positions: {vision_start_positions}")
+                            print(f"   vision_end_positions: {vision_end_positions}")
+                            self._indices_debug_logged = True
+
+                        # Collect all image patch tokens between vision_start and vision_end
+                        image_patch_indices = []
+                        for start_pos, end_pos in zip(vision_start_positions, vision_end_positions):
+                            # Include all tokens between start and end (exclusive of markers)
+                            patch_indices = torch.arange(start_pos + 1, end_pos, device=input_ids_flat.device)
+                            image_patch_indices.append(patch_indices)
+
+                        if image_patch_indices:
+                            image_patch_indices = torch.cat(image_patch_indices)
+                            image_features = image_hidden_state[:, image_patch_indices, :]
+
+                            if self.debug_logging and not hasattr(self, "_extraction_debug_logged"):
+                                print(f"   Total image patches extracted: {len(image_patch_indices)}")
+                                print(f"   image_features shape: {image_features.shape}")
+                                self._extraction_debug_logged = True
+                        else:
+                            image_features = torch.empty(1, 0, self.vl_model.config.hidden_size, device=self.device, dtype=torch.bfloat16)
                     else:
                         image_features = torch.empty(1, 0, self.vl_model.config.hidden_size, device=self.device, dtype=torch.bfloat16)
 
@@ -268,15 +316,8 @@ class VisionLanguageEncoder(torch.nn.Module):
                         weights_expanded = weights.repeat_interleave(num_patches_per_view).unsqueeze(0).unsqueeze(-1)
                         image_features = image_features * weights_expanded
 
-                    if use_cache and self.cache_enabled:
-                        cache_path = self._get_cache_path(key, txt, views)
-                        features_to_cache = (
-                            image_features.detach().to("cpu", dtype=torch.float16),
-                            guidance_vector.detach().to("cpu", dtype=torch.float16)
-                        )
-                        VLACacheManager._atomic_save(features_to_cache, cache_path)
-                        self._enforce_cache_limit()
-
+                    # ✅ 캐싱은 unified_model의 auto_cache_backfill이 VLACacheManager로 처리
+                    # vl_encoder는 순수하게 VLM forward만 수행
                     features_dict[key] = (image_features, guidance_vector)
 
         if not features_dict:

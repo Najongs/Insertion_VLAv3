@@ -857,30 +857,20 @@ Respond with:
             t_sensor_start = time.time()
             sensor_features_encoded = None
             if sensor_batch is not None:
-                sensor_features_encoded = self.model.sensor_encoder(sensor_batch)
+                sensor_features_encoded, _ = self.model.sensor_encoder(sensor_batch)
             timings['sensor_encoding'] = (time.time() - t_sensor_start) * 1000
 
             # 2. Encode robot state features
             t_robot_start = time.time()
-            robot_state_features_encoded = None
+            robot_state_tokens = None
             if robot_batch is not None:
-                robot_state_features_encoded = self.model.robot_state_encoder(robot_batch)
+                robot_state_tokens = self.model.robot_state_encoder(robot_batch, return_sequence=True)
             timings['robot_encoding'] = (time.time() - t_robot_start) * 1000
 
-            # 3. Prepare vision context + concatenated sensor features for ActionExpert (V2)
+            # 3. Prepare vision context for ActionExpert (V2)
             context_features = image_features
             if context_features.dim() == 2:
                 context_features = context_features.unsqueeze(1)
-
-            sensor_features_combined = None
-            if sensor_features_encoded is not None and robot_state_features_encoded is not None:
-                sensor_features_combined = torch.cat(
-                    (sensor_features_encoded, robot_state_features_encoded), dim=-1
-                )
-            elif sensor_features_encoded is not None:
-                sensor_features_combined = sensor_features_encoded
-            elif robot_state_features_encoded is not None:
-                sensor_features_combined = robot_state_features_encoded
 
             # 4. Action prediction with V2 architecture
             t_action_start = time.time()
@@ -888,7 +878,8 @@ Respond with:
                 pred_actions = self.model.action_expert.sample(
                     context_features,
                     guidance_vectors,
-                    sensor_features=sensor_features_combined,
+                    sensor_features=sensor_features_encoded,
+                    robot_state_tokens=robot_state_tokens,
                     num_steps=self.config.FLOW_STEPS,
                     method=self.config.FLOW_SOLVER
                 )
@@ -901,7 +892,8 @@ Respond with:
 
                 pred_actions, delta = self.model.action_expert(
                     z_chunk, context_features, guidance_vectors,
-                    sensor_features=sensor_features_combined
+                    sensor_features=sensor_features_encoded,
+                    robot_state_tokens=robot_state_tokens
                 )
             timings['action_prediction'] = (time.time() - t_action_start) * 1000
 

@@ -55,6 +55,7 @@ class QwenVLAUnified(nn.Module):
         action_dim=7,
         horizon=8,
         hidden_dim=1024,
+        action_expert_hidden_dim: int = 1024,
         cache_dir="/home/najo/NAS/VLA/dataset/cache/qwen_vl_features",
         external_cache_root: Optional[str] = None,
         auto_cache_backfill: bool = True,
@@ -80,7 +81,8 @@ class QwenVLAUnified(nn.Module):
         view_aggregation='weighted_mean',
         view5_weight=2.0,
         device_map=None,
-        cache_only_mode=False):
+        cache_only_mode=False,
+        debug_mode: bool = False):
         super().__init__()
 
         if model_type not in ['regression', 'flow_matching']:
@@ -96,6 +98,7 @@ class QwenVLAUnified(nn.Module):
         self.horizon = horizon
         self.auto_cache_backfill = auto_cache_backfill
         self.cache_only_mode = cache_only_mode
+        self.debug_mode = bool(debug_mode)
         self.external_cache_mgr: Optional[VLACacheManager] = None
         self.external_cache_root = None
 
@@ -135,7 +138,8 @@ class QwenVLAUnified(nn.Module):
                 parallel_view_encoding=parallel_view_encoding,
                 view_aggregation=view_aggregation,
                 view5_weight=view5_weight,
-                device=next(self.vl_model.parameters()).device
+                device=next(self.vl_model.parameters()).device,
+                debug_logging=self.debug_mode,
             )
 
             if finetune_vl == 'lora':
@@ -190,20 +194,18 @@ class QwenVLAUnified(nn.Module):
         else:
             self.robot_state_encoder = None
 
-        combined_sensor_dim = 0
-        if sensor_enabled:
-            combined_sensor_dim += sensor_output_dim
-        if self.robot_state_enabled:
-            combined_sensor_dim += robot_state_output_dim
+        sensor_feature_dim = sensor_output_dim if sensor_enabled else None
+        robot_state_token_dim = self.robot_state_encoder.model_dim if self.robot_state_enabled else None
 
         ActionExpertClass = FlowMatchingActionExpert if model_type == 'flow_matching' else RegressionActionExpert
         self.action_expert = ActionExpertClass(
             image_feature_dim=vl_hidden_size,
             text_guidance_dim=vl_hidden_size,
-            sensor_dim=combined_sensor_dim,
+            sensor_dim=sensor_feature_dim,
+            robot_state_dim=robot_state_token_dim,
             action_dim=action_dim,
             horizon=horizon,
-            hidden_dim=hidden_dim,
+            hidden_dim=action_expert_hidden_dim,
         ).to(dtype=torch.bfloat16, device="cuda")
 
         print("✅ 모델 초기화 완료!")
@@ -366,13 +368,33 @@ class QwenVLAUnified(nn.Module):
         subset_keys = [cache_keys[i] for i in indices_to_encode]
 
         # VL 특징 인코딩 (V2: 튜플 반환)
-        image_features, guidance_vectors = self.vl_encoder.encode(
+        vl_output = self.vl_encoder.encode(
             subset_texts, subset_images, subset_keys, use_cache=False
         )
+        image_features, guidance_vectors = vl_output
 
         # 결과를 인덱스별 튜플로 분할
+        # DEBUG: Check types before split
+        if self.debug_mode and not isinstance(image_features, torch.Tensor):
+            print(f"🔥 DEBUG: image_features is not a Tensor! Type: {type(image_features)}")
+            if isinstance(image_features, (tuple, list)):
+                print(f"   Length: {len(image_features)}, First element type: {type(image_features[0]) if len(image_features) > 0 else 'N/A'}")
+
+        if self.debug_mode and not isinstance(guidance_vectors, torch.Tensor):
+            print(f"🔥 DEBUG: guidance_vectors is not a Tensor! Type: {type(guidance_vectors)}")
+            if isinstance(guidance_vectors, (tuple, list)):
+                print(f"   Length: {len(guidance_vectors)}, First element type: {type(guidance_vectors[0]) if len(guidance_vectors) > 0 else 'N/A'}")
+
         img_splits = torch.split(image_features, 1, dim=0)
         txt_splits = torch.split(guidance_vectors, 1, dim=0)
+
+        # DEBUG: Check split results
+        if self.debug_mode:
+            if len(img_splits) > 0:
+                print(f"🔍 DEBUG: img_splits[0] type: {type(img_splits[0])}, shape: {img_splits[0].shape if isinstance(img_splits[0], torch.Tensor) else 'N/A'}")
+            if len(txt_splits) > 0:
+                print(f"🔍 DEBUG: txt_splits[0] type: {type(txt_splits[0])}, shape: {txt_splits[0].shape if isinstance(txt_splits[0], torch.Tensor) else 'N/A'}")
+
         tokens_by_index = {
             idx: (img, txt) for idx, img, txt in zip(indices_to_encode, img_splits, txt_splits)
         }
@@ -383,28 +405,89 @@ class QwenVLAUnified(nn.Module):
             prompt_hashes = vl_cache_metadata.get("prompt_hashes")
 
             if dataset_names and vlm_indices and prompt_hashes:
+                # Initialize backfill stats tracker
+                if not hasattr(self, "_backfill_stats"):
+                    self._backfill_stats = {'success': 0, 'failed': 0, 'skipped': 0}
+                    if self.debug_mode:
+                        print("🧷 Auto cache backfill enabled (V2 format)")
+
                 for idx, (img_tensor, txt_tensor) in tokens_by_index.items():
-                    if img_tensor is None or txt_tensor is None: continue
+                    # DEBUG: Check types from tokens_by_index
+                    if self.debug_mode and self._backfill_stats['failed'] == 0:  # Only log on first iteration
+                        print(f"🔍 DEBUG BACKFILL: idx={idx}, img_tensor type={type(img_tensor)}, txt_tensor type={type(txt_tensor)}")
+                        if isinstance(img_tensor, torch.Tensor):
+                            print(f"   img_tensor shape: {img_tensor.shape}")
+                        if isinstance(txt_tensor, torch.Tensor):
+                            print(f"   txt_tensor shape: {txt_tensor.shape}")
+
+                    # Validate that img_tensor and txt_tensor are actual tensors, not tuples
+                    if not isinstance(img_tensor, torch.Tensor):
+                        if isinstance(img_tensor, (tuple, list)) and len(img_tensor) == 1:
+                            img_tensor = img_tensor[0]
+                        else:
+                            self._backfill_stats['skipped'] += 1
+                            if self.debug_mode and self._backfill_stats['skipped'] == 1:
+                                print(f"⚠️ DEBUG: Skipping img_tensor (not a tensor): type={type(img_tensor)}")
+                            continue
+
+                    if not isinstance(txt_tensor, torch.Tensor):
+                        if isinstance(txt_tensor, (tuple, list)) and len(txt_tensor) == 1:
+                            txt_tensor = txt_tensor[0]
+                        else:
+                            self._backfill_stats['skipped'] += 1
+                            if self.debug_mode and self._backfill_stats['skipped'] == 1:
+                                print(f"⚠️ DEBUG: Skipping txt_tensor (not a tensor): type={type(txt_tensor)}")
+                            continue
+
+                    if img_tensor is None or txt_tensor is None:
+                        self._backfill_stats['skipped'] += 1
+                        continue
+
                     try:
-                        if idx >= len(dataset_names) or idx >= len(vlm_indices) or idx >= len(prompt_hashes): continue
+                        if idx >= len(dataset_names) or idx >= len(vlm_indices) or idx >= len(prompt_hashes):
+                            continue
                         dataset_name, vlm_idx, prompt_hash = dataset_names[idx], int(vlm_indices[idx]), prompt_hashes[idx]
                     except (TypeError, ValueError, IndexError):
+                        self._backfill_stats['skipped'] += 1
                         continue
-                    if dataset_name is None or prompt_hash is None: continue
-                    
+
+                    if dataset_name is None or prompt_hash is None:
+                        self._backfill_stats['skipped'] += 1
+                        continue
+
                     try:
-                        if not hasattr(self, "_cache_backfill_notice"):
-                            print("🧷 훈련 중 누락된 VL 캐시 항목을 자동으로 빌드합니다 (V2 형식).")
-                            self._cache_backfill_notice = True
-                        # V2: 튜플을 저장
+                        # DEBUG: Before save_cache
+                        if self.debug_mode and self._backfill_stats['success'] == 0 and self._backfill_stats['failed'] == 0:
+                            print(f"🔍 DEBUG: About to call save_cache with:")
+                            print(f"   img_tensor: type={type(img_tensor)}, is_tensor={isinstance(img_tensor, torch.Tensor)}")
+                            print(f"   txt_tensor: type={type(txt_tensor)}, is_tensor={isinstance(txt_tensor, torch.Tensor)}")
+
+                        # V2: 튜플을 저장 (img_tensor와 txt_tensor가 단일 텐서임을 보장)
                         self.external_cache_mgr.save_cache(
                             dataset_name=dataset_name, vlm_idx=vlm_idx, prompt_hash=prompt_hash,
-                            vl_features=(img_tensor.detach(), txt_tensor.detach()),
+                            vl_features=(img_tensor, txt_tensor),
                         )
+                        self._backfill_stats['success'] += 1
+
+                        # Print summary every 50 successful backfills
+                        if self.debug_mode and self._backfill_stats['success'] % 50 == 0:
+                            total = sum(self._backfill_stats.values())
+                            print(f"💾 Backfill: {self._backfill_stats['success']} saved, "
+                                  f"{self._backfill_stats['failed']} failed, "
+                                  f"{self._backfill_stats['skipped']} skipped (total: {total})")
+
                     except Exception as e:
-                        if not hasattr(self, "_cache_backfill_warned"):
-                            print(f"⚠️ VL 캐시 항목 백필 실패 ({dataset_name}_vlm{vlm_idx}): {e}")
-                            self.backfill_warned = True
+                        self._backfill_stats['failed'] += 1
+                        if self._backfill_stats['failed'] == 1:  # Only show first failure
+                            print(f"⚠️ Cache backfill failed ({dataset_name}_vlm{vlm_idx}): {e}")
+                            print(f"   img_tensor: type={type(img_tensor)}, is_tensor={isinstance(img_tensor, torch.Tensor)}")
+                            print(f"   txt_tensor: type={type(txt_tensor)}, is_tensor={isinstance(txt_tensor, torch.Tensor)}")
+                            if self.debug_mode:
+                                import traceback
+                                traceback.print_exc()
+                                print(f"   Further backfill errors will be counted silently.")
+                            else:
+                                print(f"   Further backfill errors will be counted silently.")
         return tokens_by_index
 
     def encode_vision(self,
@@ -472,32 +555,31 @@ class QwenVLAUnified(nn.Module):
                     batch_size = len(text_inputs)
                     return torch.zeros(batch_size, self.horizon, self.action_dim, device=device), None, None
 
-            image_features, guidance_vectors = self.vl_encoder.encode(
-                text_inputs, image_inputs, cache_keys, use_cache=cache
+            # ✅ 캐시가 전혀 없는 경우: 모든 샘플을 인코딩하고 backfill 수행
+            missing_indices = list(range(len(text_inputs)))
+            new_tokens_by_idx = self._encode_missing_vl_features_and_backfill(
+                text_inputs, image_inputs, cache_keys, missing_indices, device, vl_cache_metadata
             )
+
+            # Concatenate all encoded features
+            img_tokens = [new_tokens_by_idx[i][0] for i in range(len(text_inputs))]
+            txt_tokens = [new_tokens_by_idx[i][1] for i in range(len(text_inputs))]
+            image_features = torch.cat(img_tokens, dim=0)
+            guidance_vectors = torch.cat(txt_tokens, dim=0)
 
         # 2. 센서 및 로봇 상태 특징 인코딩
         sensor_features_encoded: Optional[torch.Tensor] = None
         if self.sensor_enabled and sensor_data is not None:
-            sensor_features_encoded = self.sensor_encoder(sensor_data.to(device=device, dtype=torch.bfloat16))
+            sensor_features_encoded, _ = self.sensor_encoder(
+                sensor_data.to(device=device, dtype=torch.bfloat16)
+            )
 
-        robot_state_features_encoded: Optional[torch.Tensor] = None
+        robot_state_tokens: Optional[torch.Tensor] = None
         if self.robot_state_enabled and robot_states is not None:
-            robot_state_features_encoded = self.robot_state_encoder(robot_states.to(device=device, dtype=torch.bfloat16))
-
-        # 3. 센서 특징 결합
-        sensor_tensors = []
-        if sensor_features_encoded is not None:
-            sensor_tensors.append(sensor_features_encoded)
-        if robot_state_features_encoded is not None:
-            sensor_tensors.append(robot_state_features_encoded)
-
-        sensor_features_combined: Optional[torch.Tensor] = None
-        if sensor_tensors:
-            if len(sensor_tensors) > 1:
-                sensor_features_combined = torch.cat(sensor_tensors, dim=-1)
-            else:
-                sensor_features_combined = sensor_tensors[0]
+            robot_state_tokens = self.robot_state_encoder(
+                robot_states.to(device=device, dtype=torch.bfloat16),
+                return_sequence=True
+            )
 
         if image_features is not None and image_features.dim() == 2:
             image_features = image_features.unsqueeze(1)
@@ -509,13 +591,15 @@ class QwenVLAUnified(nn.Module):
                 with torch.autocast(device.type, dtype=torch.bfloat16):
                     loss = self.action_expert.compute_loss(
                         actions, image_features, guidance_vectors,
-                        sensor_features=sensor_features_combined
+                        sensor_features=sensor_features_encoded,
+                        robot_state_tokens=robot_state_tokens
                     )
                 return loss, None, None
             else:
                 sampled_actions = self.action_expert.sample(
                     image_features, guidance_vectors,
-                    sensor_features=sensor_features_combined,
+                    sensor_features=sensor_features_encoded,
+                    robot_state_tokens=robot_state_tokens,
                     num_steps=self.flow_steps, method=self.flow_solver
                 )
                 return sampled_actions, None, None
@@ -526,7 +610,8 @@ class QwenVLAUnified(nn.Module):
             with torch.autocast(device.type, dtype=torch.bfloat16):
                 pred_actions, delta = self.action_expert(
                     z_chunk, image_features, guidance_vectors,
-                    sensor_features=sensor_features_combined
+                    sensor_features=sensor_features_encoded,
+                    robot_state_tokens=robot_state_tokens
                 )
             return pred_actions, delta
         else:

@@ -1,0 +1,26 @@
+{
+  "linear_probe": {
+    "accuracy": 0.995,
+    "precision": 1.0,
+    "recall": 0.967741935483871,
+    "f1": 0.9836065573770492,
+    "roc_auc": 0.999856842908952,
+    "tn": 338.0,
+    "fp": 0.0,
+    "fn": 2.0,
+    "tp": 60.0,
+    "confusion_matrix": [
+      [
+        338,
+        0
+      ],
+      [
+        2,
+        60
+      ]
+    ]
+  },
+  "ami_contact_vs_cluster": -0.0001249126894691863,
+  "num_samples": 2000,
+  "contact_threshold": 0.85
+}
